@@ -1,0 +1,44 @@
+{
+  "rules": {
+    "travel": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "calendar": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "dokkaebi": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "matches": {
+        ".indexOn": ["seasonId", "status", "date"]
+      },
+      "seasons": {
+        ".indexOn": ["active"]
+      },
+      "players": {
+        ".indexOn": ["number"]
+      }
+    },
+    "gymlog": {
+      "allowedEmails": {
+        ".read": "auth != null",
+        "$enc": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == '3hosungo@gmail.com'",
+          ".validate": "newData.hasChildren(['email', 'active'])",
+          "email": { ".validate": "newData.isString()" },
+          "active": { ".validate": "newData.isBoolean()" },
+          "addedAt": { ".validate": "newData.isNumber() || newData.val() == now" },
+          "$other": { ".validate": true }
+        }
+      },
+      "users": {
+        "$uid": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": "auth != null && auth.uid == $uid"
+        }
+      }
+    }
+  }
+}

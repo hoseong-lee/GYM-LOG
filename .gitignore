@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.vite
+
+# 로컬 관리 문서
+gym-log-spec.md
+gym-log-requirements.md

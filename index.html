@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/GYM-LOG/icons/icon.svg" />
+  <link rel="apple-touch-icon" sizes="192x192" href="/GYM-LOG/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="/GYM-LOG/icons/icon-512.png" />
+  <link rel="manifest" href="/GYM-LOG/manifest.webmanifest" />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GYM LOG" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="GYM LOG" />
+  <meta name="description" content="개인용 헬스 운동 기록 + 코칭 — 빠른 기록·출석·가이드·추천" />
+  <title>GYM LOG</title>
+  <script>
+    // 다크모드 우선 — 사용자가 명시적으로 'light' 저장한 경우만 라이트
+    (function () {
+      try {
+        if (localStorage.getItem('gymlog-theme') !== 'light') {
+          document.documentElement.classList.add('dark')
+        }
+      } catch (e) {
+        document.documentElement.classList.add('dark')
+      }
+    })()
+  </script>
+  <script>
+    // 404.html SPA 폴백 복원
+    (function () {
+      var redirect = sessionStorage.redirect
+      delete sessionStorage.redirect
+      if (redirect && redirect != location.href) {
+        history.replaceState(null, null, redirect)
+      }
+    })()
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
