@@ -1,14 +1,16 @@
 <script setup>
 // 활성 세션이 없을 때의 시작 화면.
-//  (a) 오늘 요일 추천 루틴으로 시작  (b) 직접 구성  (c) 빠른 기록(보조)  (d) 요일 플랜 편집
+//  (a) 오늘 요일 추천 루틴  (b) 내 루틴(저장됨)  (c) 지난 세션 반복  (d) 직접 구성  (e) 빠른 기록  (f) 요일 플랜
 import { bodyPartLabels } from '@/data/exercises'
 
-const props = defineProps({
+defineProps({
   todaySession: { type: Object, default: null }, // { name, bodyParts } | null
-  isRestDay: { type: Boolean, default: false }, // 오늘 요일이 휴식으로 매핑됐는가
-  splitLabel: { type: String, default: '' }
+  isRestDay: { type: Boolean, default: false },
+  splitLabel: { type: String, default: '' },
+  routines: { type: Array, default: () => [] }, // [{ id, name, items }]
+  lastSession: { type: Object, default: null } // { date, parts:[], count } | null
 })
-const emit = defineEmits(['start-routine', 'start-blank', 'quick-log', 'edit-weekly'])
+const emit = defineEmits(['start-routine', 'start-blank', 'quick-log', 'edit-weekly', 'start-saved', 'repeat-last'])
 </script>
 
 <template>
@@ -22,23 +24,16 @@ const emit = defineEmits(['start-routine', 'start-blank', 'quick-log', 'edit-wee
 
       <template v-if="isRestDay">
         <div class="mt-2 text-h1 font-bold text-text-primary">오늘은 쉬는 날 💤</div>
-        <p class="mt-1 text-sm text-text-muted">요일 플랜상 휴식일입니다. 그래도 운동하려면 아래에서 직접 구성하세요.</p>
+        <p class="mt-1 text-sm text-text-muted">요일 플랜상 휴식일입니다. 그래도 운동하려면 아래에서 시작하세요.</p>
       </template>
       <template v-else-if="todaySession">
         <div class="mt-1 text-h1 font-bold text-text-primary">{{ todaySession.name }}</div>
         <div class="mt-2 flex flex-wrap gap-1.5">
-          <span
-            v-for="p in todaySession.bodyParts"
-            :key="p"
-            class="rounded-pill bg-accent-subtle px-2.5 py-1 text-caption font-medium text-accent"
-          >
+          <span v-for="p in todaySession.bodyParts" :key="p" class="rounded-pill bg-accent-subtle px-2.5 py-1 text-caption font-medium text-accent">
             {{ bodyPartLabels[p] || p }}
           </span>
         </div>
-        <button
-          class="mt-4 w-full rounded-field bg-accent py-3.5 font-semibold text-accent-text transition-transform duration-tap active:scale-[0.99]"
-          @click="emit('start-routine')"
-        >
+        <button class="mt-4 w-full rounded-field bg-accent py-3.5 font-semibold text-accent-text transition-transform duration-tap active:scale-[0.99]" @click="emit('start-routine')">
           이 루틴으로 시작 →
         </button>
       </template>
@@ -48,11 +43,42 @@ const emit = defineEmits(['start-routine', 'start-blank', 'quick-log', 'edit-wee
       </template>
     </div>
 
-    <!-- 직접 구성 -->
+    <!-- 지난 세션 반복 -->
     <button
-      class="mt-4 w-full rounded-card border border-border-subtle py-4 font-semibold text-text-secondary active:bg-surface-1"
-      @click="emit('start-blank')"
+      v-if="lastSession"
+      class="mt-3 flex w-full items-center gap-3 rounded-card bg-surface-1 p-4 text-left shadow-card active:bg-surface-2"
+      @click="emit('repeat-last')"
     >
+      <span class="text-xl">↻</span>
+      <div class="min-w-0 flex-1">
+        <div class="font-medium text-text-primary">지난 세션 반복</div>
+        <div class="truncate text-caption text-text-muted">{{ lastSession.date }} · {{ lastSession.parts.join(', ') }} · {{ lastSession.count }}종목</div>
+      </div>
+      <span class="text-text-muted">›</span>
+    </button>
+
+    <!-- 내 루틴 -->
+    <div v-if="routines.length" class="mt-3">
+      <div class="mb-1.5 text-unit text-text-muted">내 루틴</div>
+      <div class="flex flex-col gap-2">
+        <button
+          v-for="r in routines"
+          :key="r.id"
+          class="flex items-center gap-3 rounded-card bg-surface-1 p-4 text-left shadow-card active:bg-surface-2"
+          @click="emit('start-saved', r)"
+        >
+          <span class="text-xl">⭐</span>
+          <div class="min-w-0 flex-1">
+            <div class="font-medium text-text-primary">{{ r.name }}</div>
+            <div class="truncate text-caption text-text-muted">{{ (r.items || []).map((i) => i.name).join(', ') }}</div>
+          </div>
+          <span class="text-text-muted">시작 ›</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 직접 구성 -->
+    <button class="mt-4 w-full rounded-card border border-border-subtle py-4 font-semibold text-text-secondary active:bg-surface-1" @click="emit('start-blank')">
       ＋ 직접 루틴 구성
     </button>
 

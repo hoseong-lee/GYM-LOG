@@ -1,5 +1,31 @@
 // 세션 러너 보조 유틸 — 목표 프리필 계산, 종목 정렬, 요약 집계.
-import { e1rm } from '@/utils/exercise'
+import { e1rm, topSetByE1rm } from '@/utils/exercise'
+import { getExercise } from '@/data/exercises'
+import { defaultRestForPattern } from '@/utils/rest'
+
+// 하루 로그(dayLog.strength) → 세션 구성 fullItems[] (지난 세션 반복용).
+// 같은 무게/횟수로 복원 — weight 포함(진행성 재계산 아님).
+export function sessionFromDayLog(dayLog) {
+  const strength = dayLog?.strength || {}
+  return Object.values(strength)
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+    .map((e) => {
+      const cat = getExercise(e.exKey)
+      const top = topSetByE1rm(e.sets)
+      return {
+        exKey: e.exKey,
+        name: e.name,
+        bodyPart: e.bodyPart,
+        restSec: defaultRestForPattern(cat?.pattern),
+        step: cat?.increment || 2.5,
+        planned: {
+          targetSets: (e.sets || []).length || 3,
+          weight: Number(top.weight) || 0,
+          reps: Number(top.reps) || 0
+        }
+      }
+    })
+}
 
 // activeSession.exercises 객체맵 → order 정렬된 배열 [{ k, ...ex }]
 export function sortedExercises(session) {

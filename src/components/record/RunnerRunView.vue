@@ -12,12 +12,17 @@ import { updateActiveSession, saveStrengthEntry } from '@/firebase/database'
 import { sortedExercises, doneSetsOf } from '@/utils/session'
 import { defaultRestForPattern, formatRest } from '@/utils/rest'
 import { resolveExKey } from '@/utils/exercise'
+import { DEFAULT_PLATE_SET } from '@/utils/plate'
+import { useAuthStore } from '@/stores/auth'
 import { pushToast } from '@/composables/useToast'
 
 const props = defineProps({
   session: { type: Object, required: true } // activeSession (반응형 — 부모가 갱신)
 })
 const emit = defineEmits(['finish', 'abort', 'mutated'])
+
+const authStore = useAuthStore()
+const plateSet = computed(() => authStore.profile?.plateSet || DEFAULT_PLATE_SET)
 
 // activeSession 증분 update 후 부모에게 재조회 신호.
 async function mutate(patch) {
@@ -140,7 +145,10 @@ async function flushExercise(ex) {
       bodyPart: ex.bodyPart,
       sets: done
     })
-    if (isPR) prCount.value += 1
+    if (isPR) {
+      prCount.value += 1
+      pushToast('🎉 신기록! ' + ex.name, 'success', 4000)
+    }
     await mutate({ [`exercises/${ex.k}/savedToLog`]: true })
   } catch (e) {
     pushToast('저장 실패: ' + (e?.message || e), 'error')
@@ -282,6 +290,7 @@ const progressDots = computed(() => list.value.map((_, i) => i <= idx.value))
           :index="i"
           :state="setRowState(i)"
           :step="current.step || getExercise(current.exKey)?.increment || 2.5"
+          :plate-set="getExercise(current.exKey)?.equipment === 'barbell' ? plateSet : null"
           @check="onCheck(i, $event)"
           @uncheck="onUncheck(i)"
           @update="onUpdateSet(i, $event)"

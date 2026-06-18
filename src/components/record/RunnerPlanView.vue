@@ -5,8 +5,9 @@ import { ref, computed, onMounted } from 'vue'
 import ExercisePicker from '@/components/record/ExercisePicker.vue'
 import PlanExerciseRow from '@/components/record/PlanExerciseRow.vue'
 import WeeklyPlanEditor from '@/components/record/WeeklyPlanEditor.vue'
+import BottomSheet from '@/components/common/BottomSheet.vue'
 import { getExercise } from '@/data/exercises'
-import { getLastForExercise, setActiveSession } from '@/firebase/database'
+import { getLastForExercise, setActiveSession, saveRoutine } from '@/firebase/database'
 import { defaultRestForPattern } from '@/utils/rest'
 import { plannedFromLast } from '@/utils/session'
 import { resolveExKey } from '@/utils/exercise'
@@ -50,13 +51,84 @@ async function makeRow(exKey, fallback = {}) {
   }
 }
 
+// 저장된 루틴/지난 세션 항목(fullItems) → draft 행. 목표 세트/횟수 복원.
+// item.planned.weight 가 있으면(지난세션) 그대로, 없으면(루틴) 직전기록으로 재계산(진행성).
+async function makeRowFromItem(item) {
+  const cat = getExercise(item.exKey)
+  const ex = cat || {
+    id: item.exKey,
+    name: item.name || item.exKey,
+    bodyPart: item.bodyPart || 'chest',
+    increment: item.step || 2.5,
+    repRange: [8, 12],
+    pattern: 'isolation'
+  }
+  const prev = await getLastForExercise(item.exKey)
+  let weight, reps
+  if (item.planned?.weight != null) {
+    weight = item.planned.weight
+    reps = item.planned.reps
+  } else {
+    const pl = plannedFromLast(ex, prev)
+    weight = pl.weight
+    reps = item.planned?.reps ?? pl.reps
+  }
+  return {
+    exKey: ex.id,
+    name: ex.name,
+    bodyPart: ex.bodyPart,
+    step: ex.increment || 2.5,
+    restSec: item.restSec ?? defaultRestForPattern(ex.pattern),
+    planned: { targetSets: item.planned?.targetSets || 3, weight, reps },
+    prev
+  }
+}
+
 onMounted(async () => {
-  if (props.seed?.exKeys?.length) {
+  if (props.seed?.fullItems?.length) {
+    for (const it of props.seed.fullItems) {
+      draft.value.push(await makeRowFromItem(it))
+    }
+  } else if (props.seed?.exKeys?.length) {
     for (const k of props.seed.exKeys) {
       draft.value.push(await makeRow(k))
     }
   }
 })
+
+// ── 루틴으로 저장 ──
+const saveOpen = ref(false)
+const routineName = ref('')
+const savingRoutine = ref(false)
+function openSaveRoutine() {
+  routineName.value = props.seed?.sessionName && props.seed.sessionName !== '직접 구성' ? props.seed.sessionName : ''
+  saveOpen.value = true
+}
+async function doSaveRoutine() {
+  const name = routineName.value.trim()
+  if (!name) {
+    pushToast('루틴 이름을 입력하세요.', 'error')
+    return
+  }
+  savingRoutine.value = true
+  try {
+    const items = draft.value.map((r) => ({
+      exKey: r.exKey,
+      name: r.name,
+      bodyPart: r.bodyPart,
+      restSec: r.restSec,
+      step: r.step,
+      planned: { targetSets: r.planned.targetSets, reps: r.planned.reps }
+    }))
+    await saveRoutine({ name, splitId: props.splitId || null, sessionName: props.seed?.sessionName || null, order: 0, items })
+    pushToast(`루틴 '${name}' 저장됨`, 'success')
+    saveOpen.value = false
+  } catch (e) {
+    pushToast('저장 실패: ' + (e?.message || e), 'error')
+  } finally {
+    savingRoutine.value = false
+  }
+}
 
 async function addCatalog(ex) {
   if (draft.value.some((r) => r.exKey === ex.id)) {
@@ -178,6 +250,14 @@ async function start() {
       >
         ＋ 종목 추가
       </button>
+
+      <button
+        v-if="draft.length"
+        class="mt-2 w-full rounded-field py-2.5 text-center text-sm text-accent active:opacity-70"
+        @click="openSaveRoutine"
+      >
+        ⭐ 이 구성을 내 루틴으로 저장
+      </button>
     </div>
 
     <!-- sticky 하단 액션 -->
@@ -196,5 +276,24 @@ async function start() {
 
     <ExercisePicker v-model="pickerOpen" @select="addCatalog" @select-custom="addCustom" />
     <WeeklyPlanEditor v-model="weeklyOpen" :split-id="splitId" />
+
+    <!-- 루틴으로 저장 -->
+    <BottomSheet v-model="saveOpen" title="루틴으로 저장">
+      <input
+        v-model="routineName"
+        type="text"
+        placeholder="루틴 이름 (예: Push A, 등·이두)"
+        class="w-full rounded-field bg-surface-1 px-3 py-3 text-text-primary outline-none placeholder:text-text-muted"
+        @keyup.enter="doSaveRoutine"
+      />
+      <p class="mt-2 text-caption text-text-muted">무게는 저장하지 않고, 시작할 때마다 직전 기록으로 자동 제안됩니다(점진적 과부하).</p>
+      <button
+        class="mt-4 w-full rounded-field bg-accent py-3.5 font-semibold text-accent-text active:scale-[0.99] disabled:opacity-60"
+        :disabled="savingRoutine"
+        @click="doSaveRoutine"
+      >
+        {{ savingRoutine ? '저장 중…' : '저장' }}
+      </button>
+    </BottomSheet>
   </div>
 </template>

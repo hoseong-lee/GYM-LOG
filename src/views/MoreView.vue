@@ -11,10 +11,15 @@ import {
   setGoals,
   setDietTarget,
   getLogsRange,
-  getBodyRange
+  getBodyRange,
+  listRoutines,
+  deleteRoutine,
+  updateRoutine,
+  upsertUser
 } from '@/firebase/database'
 import { getExercise } from '@/data/exercises'
 import { e1rm } from '@/utils/exercise'
+import { DEFAULT_PLATE_SET } from '@/utils/plate'
 import { todayKey, daysAgoKey } from '@/utils/date'
 import { pushToast } from '@/composables/useToast'
 
@@ -24,6 +29,60 @@ const theme = useThemeStore()
 
 const prBoard = ref([])
 const goalOpen = ref(false)
+
+// 루틴 관리
+const routines = ref([])
+const renameOpen = ref(false)
+const renamingId = ref(null)
+const renameName = ref('')
+
+// 장비(플레이트) 설정
+const plateOpen = ref(false)
+const ALL_PLATES = [25, 20, 15, 10, 5, 2.5, 1.25, 0.5]
+const plateBarKg = ref(20)
+const plateSel = ref([...DEFAULT_PLATE_SET.plates])
+
+async function loadRoutines() {
+  routines.value = await listRoutines()
+}
+async function removeRoutine(id) {
+  await deleteRoutine(id)
+  await loadRoutines()
+  pushToast('루틴 삭제됨', 'info')
+}
+function openRename(r) {
+  renamingId.value = r.id
+  renameName.value = r.name
+  renameOpen.value = true
+}
+async function saveRename() {
+  const name = renameName.value.trim()
+  if (!name) return
+  await updateRoutine(renamingId.value, { name })
+  await loadRoutines()
+  renameOpen.value = false
+}
+
+function openPlate() {
+  const ps = authStore.profile?.plateSet || DEFAULT_PLATE_SET
+  plateBarKg.value = ps.barKg || 20
+  plateSel.value = [...(ps.plates || DEFAULT_PLATE_SET.plates)]
+  plateOpen.value = true
+}
+function togglePlate(p) {
+  if (plateSel.value.includes(p)) plateSel.value = plateSel.value.filter((x) => x !== p)
+  else plateSel.value = [...plateSel.value, p].sort((a, b) => b - a)
+}
+async function savePlate() {
+  try {
+    await upsertUser({ plateSet: { barKg: Number(plateBarKg.value) || 20, plates: [...plateSel.value].sort((a, b) => b - a) } })
+    await authStore.loadProfile(authStore.user.uid)
+    pushToast('장비 설정 저장됨', 'success')
+    plateOpen.value = false
+  } catch (e) {
+    pushToast('저장 실패: ' + (e?.message || e), 'error')
+  }
+}
 
 // 1RM 계산기
 const rmWeight = ref(60)
@@ -57,7 +116,10 @@ async function loadPR() {
     .sort((a, b) => b.e1rm - a.e1rm)
     .slice(0, 12)
 }
-onMounted(loadPR)
+onMounted(() => {
+  loadPR()
+  loadRoutines()
+})
 
 function openGoals() {
   const g = authStore.profile?.goals || {}
@@ -168,6 +230,21 @@ const links = [
         </button>
       </div>
 
+      <!-- 내 루틴 -->
+      <div v-if="routines.length" class="mb-4 rounded-card bg-surface-1 p-4">
+        <h2 class="mb-2 text-h2 text-text-primary">내 루틴</h2>
+        <ul class="flex flex-col divide-y divide-border-subtle">
+          <li v-for="r in routines" :key="r.id" class="flex items-center gap-2 py-2.5">
+            <div class="min-w-0 flex-1">
+              <div class="truncate font-medium text-text-primary">{{ r.name }}</div>
+              <div class="truncate text-caption text-text-muted">{{ (r.items || []).length }}종목 · {{ (r.items || []).map((i) => i.name).join(', ') }}</div>
+            </div>
+            <button class="rounded-field px-2 py-1 text-caption text-text-secondary active:bg-surface-2" @click="openRename(r)">이름</button>
+            <button class="rounded-field px-2 py-1 text-caption text-danger active:bg-surface-2" @click="removeRoutine(r.id)">삭제</button>
+          </li>
+        </ul>
+      </div>
+
       <!-- PR 보드 -->
       <div class="mb-4 rounded-card bg-surface-1 p-4">
         <h2 class="mb-2 text-h2 text-text-primary">개인 기록 (PR)</h2>
@@ -197,6 +274,9 @@ const links = [
       <div class="overflow-hidden rounded-card bg-surface-1">
         <button class="flex w-full items-center gap-3 border-b border-border-subtle px-4 py-3.5 text-left active:bg-surface-2" @click="openGoals">
           <span>🎯</span><span class="text-text-primary">목표 설정 (체중·체지방·운동·물·식단)</span><span class="ml-auto text-text-muted">›</span>
+        </button>
+        <button class="flex w-full items-center gap-3 border-b border-border-subtle px-4 py-3.5 text-left active:bg-surface-2" @click="openPlate">
+          <span>🏋️</span><span class="text-text-primary">장비 설정 (바벨·원판 — 플레이트 계산)</span><span class="ml-auto text-text-muted">›</span>
         </button>
         <button class="flex w-full items-center gap-3 border-b border-border-subtle px-4 py-3.5 text-left active:bg-surface-2" @click="exportWorkouts">
           <span>⬇️</span><span class="text-text-primary">운동 기록 CSV 내보내기</span>
@@ -231,6 +311,38 @@ const links = [
         </div>
       </div>
       <button class="mt-4 w-full rounded-field bg-accent py-3.5 font-semibold text-accent-text active:scale-[0.99]" @click="saveGoals">저장</button>
+    </BottomSheet>
+
+    <!-- 장비 설정 -->
+    <BottomSheet v-model="plateOpen" title="장비 설정">
+      <div class="mb-3 flex items-center justify-between rounded-field bg-surface-1 px-3 py-3">
+        <span class="text-text-secondary">바벨 무게</span>
+        <NumberStepper v-model="plateBarKg" :step="1" unit="kg" />
+      </div>
+      <div class="text-unit text-text-muted">보유 원판 (kg)</div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <button
+          v-for="p in ALL_PLATES"
+          :key="p"
+          class="num rounded-pill px-3.5 py-2 text-sm font-medium transition-colors"
+          :class="plateSel.includes(p) ? 'bg-accent text-accent-text' : 'bg-surface-1 text-text-secondary'"
+          @click="togglePlate(p)"
+        >
+          {{ p }}
+        </button>
+      </div>
+      <button class="mt-4 w-full rounded-field bg-accent py-3.5 font-semibold text-accent-text active:scale-[0.99]" @click="savePlate">저장</button>
+    </BottomSheet>
+
+    <!-- 루틴 이름 변경 -->
+    <BottomSheet v-model="renameOpen" title="루틴 이름 변경">
+      <input
+        v-model="renameName"
+        type="text"
+        class="w-full rounded-field bg-surface-1 px-3 py-3 text-text-primary outline-none"
+        @keyup.enter="saveRename"
+      />
+      <button class="mt-4 w-full rounded-field bg-accent py-3.5 font-semibold text-accent-text active:scale-[0.99]" @click="saveRename">저장</button>
     </BottomSheet>
   </div>
 </template>

@@ -344,3 +344,34 @@ export async function setWeeklyPlan(plan) {
     updatedAt: serverTimestamp()
   })
 }
+
+// ───────────── 루틴 라이브러리 ─────────────
+// routines/{id}: { name, splitId?, sessionName?, order, items:[{exKey,name,bodyPart,restSec,step,planned:{targetSets,reps}}] }
+// weight 는 저장 안 함 → 시작 시 plannedFromLast 로 재계산(진행성 과부하 자동 반영).
+export async function listRoutines() {
+  const snap = await get(dbRef(rtdb, nsPath(`users/${uid()}/routines`)))
+  const v = snap.val() || {}
+  return Object.entries(v)
+    .map(([id, r]) => ({ id, ...r }))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt || 0) - (b.createdAt || 0))
+}
+export async function getRoutine(id) {
+  const snap = await get(dbRef(rtdb, nsPath(`users/${uid()}/routines/${id}`)))
+  return snap.exists() ? { id, ...snap.val() } : null
+}
+export async function saveRoutine(routine) {
+  const u = uid()
+  const key = push(dbRef(rtdb, nsPath(`users/${u}/routines`))).key
+  await set(dbRef(rtdb, nsPath(`users/${u}/routines/${key}`)), {
+    ...routine,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  })
+  return key
+}
+export async function updateRoutine(id, patch) {
+  await update(dbRef(rtdb, nsPath(`users/${uid()}/routines/${id}`)), { ...patch, updatedAt: serverTimestamp() })
+}
+export async function deleteRoutine(id) {
+  await set(dbRef(rtdb, nsPath(`users/${uid()}/routines/${id}`)), null)
+}

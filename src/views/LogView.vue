@@ -13,12 +13,13 @@ import WeeklyPlanEditor from '@/components/record/WeeklyPlanEditor.vue'
 import ExercisePicker from '@/components/record/ExercisePicker.vue'
 import StrengthEditor from '@/components/record/StrengthEditor.vue'
 import CardioEditor from '@/components/record/CardioEditor.vue'
-import { getActiveSession, clearActiveSession, getWeeklyPlan } from '@/firebase/database'
+import { getActiveSession, clearActiveSession, getWeeklyPlan, listRoutines, getLogsRange } from '@/firebase/database'
 import { splits, DEFAULT_SPLIT } from '@/data/splits'
-import { exercisesByBodyPart } from '@/data/exercises'
-import { sessionStats } from '@/utils/session'
+import { exercisesByBodyPart, bodyPartLabels } from '@/data/exercises'
+import { sessionStats, sessionFromDayLog } from '@/utils/session'
+import { dayBodyParts } from '@/utils/stats'
 import { resolveExKey } from '@/utils/exercise'
-import { todayKey, dayjs } from '@/utils/date'
+import { todayKey, daysAgoKey, dayjs } from '@/utils/date'
 import { useAuthStore } from '@/stores/auth'
 import { pushToast } from '@/composables/useToast'
 
@@ -33,6 +34,9 @@ const loading = ref(true)
 
 const weeklyOpen = ref(false)
 const todayMapping = ref(null) // weeklyPlan.days[today] | null
+const routines = ref([])
+const lastSession = ref(null) // { date, parts, count }
+let lastDayLog = null // 지난 세션 반복용 원본
 
 // 빠른 기록(보조)
 const pickerOpen = ref(false)
@@ -75,11 +79,42 @@ async function refresh() {
     } else {
       todayMapping.value = splitObj.value.defaultWeekly?.[dow] || null
     }
+
+    // 내 루틴 + 지난 세션(최근 30일 중 가장 최근 근력 기록일)
+    routines.value = await listRoutines()
+    const recent = await getLogsRange(daysAgoKey(30), todayKey())
+    lastSession.value = null
+    lastDayLog = null
+    const days = Object.keys(recent).sort().reverse()
+    for (const d of days) {
+      const log = recent[d]
+      if (log?.strength && Object.keys(log.strength).length) {
+        lastDayLog = log
+        lastSession.value = {
+          date: d,
+          parts: dayBodyParts(log).map((p) => bodyPartLabels[p] || p),
+          count: Object.keys(log.strength).length
+        }
+        break
+      }
+    }
   } finally {
     loading.value = false
   }
 }
 onMounted(refresh)
+
+// 저장된 루틴으로 시작
+function startSavedRoutine(routine) {
+  planSeed.value = { sessionName: routine.name, fullItems: routine.items || [], splitId: splitId.value }
+  mode.value = 'plan'
+}
+// 지난 세션 반복
+function repeatLast() {
+  if (!lastDayLog) return
+  planSeed.value = { sessionName: '지난 세션 반복', fullItems: sessionFromDayLog(lastDayLog), splitId: splitId.value }
+  mode.value = 'plan'
+}
 
 // activeSession 재조회(러너 갱신용) — 자식의 증분 update 후 호출
 async function reloadSession() {
@@ -157,8 +192,12 @@ async function onSessionMutated() {
       :today-session="todaySession"
       :is-rest-day="isRestDay"
       :split-label="splitObj.label"
+      :routines="routines"
+      :last-session="lastSession"
       @start-routine="startFromRoutine"
       @start-blank="startBlank"
+      @start-saved="startSavedRoutine"
+      @repeat-last="repeatLast"
       @quick-log="pickerOpen = true"
       @edit-weekly="weeklyOpen = true"
     />

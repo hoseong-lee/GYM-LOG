@@ -5,14 +5,14 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import MiniLineChart from '@/components/common/MiniLineChart.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
-import { getLogsRange, getBodyRange, getDietDay, getWater } from '@/firebase/database'
+import { getLogsRange, getBodyRange, getDietDay, getWater, getLastByExercise } from '@/firebase/database'
 import { daysAgoKey, todayKey, formatDate } from '@/utils/date'
 import { currentStreak, isWorkoutDay, dayBodyParts, dayVolume } from '@/utils/stats'
 import { daysSincePart } from '@/utils/stats'
 import { toSeries, ema } from '@/utils/body'
 import { sumMeals } from '@/utils/nutrition'
 import { splits, DEFAULT_SPLIT } from '@/data/splits'
-import { bodyPartLabels } from '@/data/exercises'
+import { bodyPartLabels, getExercise } from '@/data/exercises'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -21,6 +21,7 @@ const recentLogs = ref({})
 const bodyRange = ref({})
 const todayDiet = ref(null)
 const todayWater = ref(0)
+const lastByEx = ref({})
 const loaded = ref(false)
 
 const PARTS = ['chest', 'back', 'shoulder', 'legs', 'arms']
@@ -30,8 +31,16 @@ onMounted(async () => {
   bodyRange.value = await getBodyRange(daysAgoKey(90), todayKey())
   todayDiet.value = await getDietDay(todayKey())
   todayWater.value = await getWater(todayKey())
+  lastByEx.value = await getLastByExercise()
   loaded.value = true
 })
+
+// 오늘 세운 신기록 (bestDate === 오늘)
+const todayPRs = computed(() =>
+  Object.entries(lastByEx.value)
+    .filter(([, v]) => v.bestDate === todayKey() && v.bestWeight)
+    .map(([exKey, v]) => ({ name: getExercise(exKey)?.name || exKey, weight: v.bestWeight, reps: v.bestReps }))
+)
 
 const weightSeries = computed(() => ema(toSeries(bodyRange.value, 'weightKg')))
 const proteinToday = computed(() => Math.round(sumMeals(todayDiet.value?.meals || {}).protein))
@@ -89,6 +98,17 @@ const lastSession = computed(() => {
       <p class="mb-4 text-text-secondary">
         <span v-if="name" class="font-semibold text-text-primary">{{ name }}</span>님, 오늘도 한 세트 가볍게 시작해요.
       </p>
+
+      <!-- 오늘의 신기록 -->
+      <div v-if="todayPRs.length" class="mb-3 rounded-card border border-pr/40 bg-surface-1 p-4 shadow-card">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🎉</span>
+          <span class="font-semibold text-pr">오늘 신기록 {{ todayPRs.length }}개!</span>
+        </div>
+        <div class="num mt-1.5 text-sm text-text-secondary">
+          {{ todayPRs.map((p) => `${p.name} ${p.weight}kg×${p.reps}`).join(' · ') }}
+        </div>
+      </div>
 
       <!-- 오늘 추천 -->
       <button class="w-full rounded-card bg-accent p-5 text-left shadow-card transition-transform duration-tap active:scale-[0.99]" @click="router.push('/log')">

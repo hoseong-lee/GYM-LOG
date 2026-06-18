@@ -3,14 +3,38 @@ import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import MuscleMap from '@/components/guide/MuscleMap.vue'
+import MiniLineChart from '@/components/common/MiniLineChart.vue'
 import { getExercise, bodyPartLabels } from '@/data/exercises'
 import { muscles } from '@/data/muscles'
+import { getLogsRange, getLastForExercise } from '@/firebase/database'
+import { exerciseProgressSeries } from '@/utils/progress'
+import { plannedFromLast } from '@/utils/session'
+import { daysAgoKey, todayKey, formatDate } from '@/utils/date'
 
 const route = useRoute()
 const router = useRouter()
 
 const ex = computed(() => getExercise(route.params.id))
 const side = ref('front')
+
+// 가이드 | 내 기록 세그먼트
+const tab = ref('guide')
+const progress = ref(null)
+const nextTarget = ref(null)
+const progressLoaded = ref(false)
+
+async function loadProgress() {
+  if (progressLoaded.value || !ex.value) return
+  const logs = await getLogsRange(daysAgoKey(180), todayKey())
+  progress.value = exerciseProgressSeries(logs, ex.value.id)
+  const prev = await getLastForExercise(ex.value.id)
+  nextTarget.value = prev ? plannedFromLast(ex.value, prev) : null
+  progressLoaded.value = true
+}
+function switchTab(t) {
+  tab.value = t
+  if (t === 'history') loadProgress()
+}
 
 // 주동근 다수가 후면이면 기본 후면 뷰
 function defaultSide(e) {
@@ -49,6 +73,65 @@ const videoUrl = computed(() => {
     </AppHeader>
 
     <div class="px-gutter py-3">
+      <!-- 세그먼트 -->
+      <div class="mb-4 flex gap-1 rounded-pill bg-surface-2 p-1">
+        <button class="flex-1 rounded-pill py-2 text-sm font-medium transition-colors" :class="tab === 'guide' ? 'bg-accent text-accent-text' : 'text-text-secondary'" @click="switchTab('guide')">가이드</button>
+        <button class="flex-1 rounded-pill py-2 text-sm font-medium transition-colors" :class="tab === 'history' ? 'bg-accent text-accent-text' : 'text-text-secondary'" @click="switchTab('history')">내 기록</button>
+      </div>
+
+      <!-- ── 내 기록 ── -->
+      <template v-if="tab === 'history'">
+        <template v-if="progress && progress.dates.length">
+          <div class="mb-3 grid grid-cols-3 gap-2">
+            <div class="rounded-card bg-surface-1 p-3 text-center">
+              <div class="text-unit text-text-muted">최고 무게</div>
+              <div class="num text-h2 text-text-primary">{{ progress.topWeight[progress.topWeight.length - 1].value }}<span class="text-unit text-text-muted">kg</span></div>
+            </div>
+            <div class="rounded-card bg-surface-1 p-3 text-center">
+              <div class="text-unit text-text-muted">추정 1RM</div>
+              <div class="num text-h2 text-accent">{{ progress.e1rm[progress.e1rm.length - 1].value }}<span class="text-unit text-text-muted">kg</span></div>
+            </div>
+            <div class="rounded-card bg-surface-1 p-3 text-center">
+              <div class="text-unit text-text-muted">세션 수</div>
+              <div class="num text-h2 text-text-primary">{{ progress.dates.length }}</div>
+            </div>
+          </div>
+
+          <div v-if="nextTarget" class="mb-3 rounded-card bg-accent-subtle p-3 text-center">
+            <span class="text-unit text-text-muted">다음 목표</span>
+            <span class="num ml-2 font-semibold text-accent">{{ nextTarget.weight }}kg × {{ nextTarget.reps }}회</span>
+          </div>
+
+          <div class="space-y-3">
+            <div class="rounded-card bg-surface-1 p-4">
+              <div class="mb-1 text-unit text-text-muted">추정 1RM 추세</div>
+              <MiniLineChart :series="progress.e1rm" color="accent" />
+            </div>
+            <div class="rounded-card bg-surface-1 p-4">
+              <div class="mb-1 text-unit text-text-muted">세션 볼륨</div>
+              <MiniLineChart :series="progress.volume" color="pr" />
+            </div>
+          </div>
+
+          <div class="mt-4 rounded-card bg-surface-1 p-4">
+            <div class="mb-2 text-unit text-text-muted">최근 세션</div>
+            <ul class="flex flex-col divide-y divide-border-subtle">
+              <li v-for="s in progress.sessions.slice(0, 8)" :key="s.date" class="flex items-center justify-between py-2">
+                <span class="text-text-secondary">{{ formatDate(s.date, 'M월 D일') }}</span>
+                <span class="num text-text-primary">{{ s.topWeight }}kg · {{ s.sets }}세트 · {{ s.volume.toLocaleString() }}kg</span>
+              </li>
+            </ul>
+          </div>
+        </template>
+        <div v-else-if="progressLoaded" class="rounded-card bg-surface-1 p-8 text-center">
+          <p class="text-text-secondary">아직 이 종목 기록이 없어요.</p>
+          <button class="mt-3 rounded-field bg-accent px-4 py-2 font-medium text-accent-text" @click="router.push('/log')">기록하러 가기 →</button>
+        </div>
+        <div v-else class="py-10 text-center text-text-muted">불러오는 중…</div>
+      </template>
+
+      <!-- ── 가이드 ── -->
+      <template v-else>
       <!-- 바디맵 -->
       <div class="rounded-card bg-surface-1 p-4">
         <div class="mb-2 flex justify-center gap-2">
@@ -135,6 +218,7 @@ const videoUrl = computed(() => {
       >
         기록하러 가기 →
       </button>
+      </template>
     </div>
   </div>
 

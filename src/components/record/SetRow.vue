@@ -3,13 +3,16 @@
 //  done    : 완료(흐림, ✅). 탭하면 uncheck(되돌리기)
 //  current : 진행 중(스테퍼 활성 + 큰 체크버튼). check(weight,reps) emit
 //  pending : 대기(프리필 표시만)
+import { computed } from 'vue'
 import NumberStepper from '@/components/common/NumberStepper.vue'
+import { platesLabel } from '@/utils/plate'
 
 const props = defineProps({
   set: { type: Object, required: true }, // { weight, reps, done }
   index: { type: Number, required: true }, // 0-base
   state: { type: String, default: 'pending' }, // 'done' | 'current' | 'pending'
-  step: { type: Number, default: 2.5 }
+  step: { type: Number, default: 2.5 },
+  plateSet: { type: Object, default: null } // { barKg, plates } — 있으면 플레이트 조합 표시
 })
 const emit = defineEmits(['check', 'uncheck', 'update'])
 
@@ -19,6 +22,11 @@ function setWeight(v) {
 function setReps(v) {
   emit('update', { ...props.set, reps: v })
 }
+
+const plate = computed(() => {
+  if (!props.plateSet) return ''
+  return platesLabel(props.set.weight, props.plateSet.barKg, props.plateSet.plates)
+})
 </script>
 
 <template>
@@ -34,22 +42,22 @@ function setReps(v) {
   </div>
 
   <!-- 진행 중 -->
-  <div
-    v-else-if="state === 'current'"
-    class="flex items-center gap-2 rounded-field bg-surface-1 px-3 py-2.5 ring-2 ring-accent"
-  >
-    <span class="num w-6 shrink-0 text-center text-unit text-accent">{{ index + 1 }}</span>
-    <div class="flex flex-1 items-center justify-center gap-2">
-      <NumberStepper :model-value="set.weight" :step="step" unit="kg" @update:model-value="setWeight" />
-      <NumberStepper :model-value="set.reps" :step="1" unit="회" @update:model-value="setReps" />
+  <div v-else-if="state === 'current'" class="rounded-field bg-surface-1 px-3 py-2.5 ring-2 ring-accent">
+    <div class="flex items-center gap-2">
+      <span class="num w-6 shrink-0 text-center text-unit text-accent">{{ index + 1 }}</span>
+      <div class="flex flex-1 items-center justify-center gap-2">
+        <NumberStepper :model-value="set.weight" :step="step" unit="kg" @update:model-value="setWeight" />
+        <NumberStepper :model-value="set.reps" :step="1" unit="회" @update:model-value="setReps" />
+      </div>
+      <button
+        class="flex h-tap w-tap shrink-0 items-center justify-center rounded-field bg-accent text-2xl text-accent-text transition-transform duration-tap active:scale-95"
+        aria-label="세트 완료"
+        @click="emit('check', { weight: Number(set.weight) || 0, reps: Number(set.reps) || 0 })"
+      >
+        ✓
+      </button>
     </div>
-    <button
-      class="flex h-tap w-tap shrink-0 items-center justify-center rounded-field bg-accent text-2xl text-accent-text transition-transform duration-tap active:scale-95"
-      aria-label="세트 완료"
-      @click="emit('check', { weight: Number(set.weight) || 0, reps: Number(set.reps) || 0 })"
-    >
-      ✓
-    </button>
+    <div v-if="plate" class="num mt-1.5 text-center text-caption text-text-muted">🏋️ 한쪽 {{ plate }}</div>
   </div>
 
   <!-- 대기 -->
