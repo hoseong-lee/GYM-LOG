@@ -45,10 +45,11 @@ function fillClass(muscle) {
 
 <style scoped>
 .muscle-map {
-  --mm-primary: #3d7dff;
-  --mm-secondary: rgba(61, 125, 255, 0.4);
-  --mm-silhouette: #262a30;
-  --mm-stroke: #0e0f11;
+  /* 테마 액센트(주황)와 표면 토큰을 따른다 (라이트/다크 자동 전환) */
+  --mm-primary: rgb(var(--accent));
+  --mm-secondary: rgb(var(--accent) / 0.4);
+  --mm-silhouette: rgb(var(--surface-3));
+  --mm-stroke: rgb(var(--bg));
 
   display: block;
   width: 100%;

@@ -6,6 +6,42 @@
   font-family: 'Pretendard', system-ui, -apple-system, 'Segoe UI', Roboto,
     'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   -webkit-tap-highlight-color: transparent;
+
+  /* ── 라이트 모드 토큰 (흰색 베이스 + 진한 주황 액센트) ── */
+  --bg: 248 250 252; /* slate-50 */
+  --surface-1: 255 255 255; /* 카드 = 흰색 */
+  --surface-2: 241 245 249;
+  --surface-3: 226 232 240; /* 핸들/실루엣/칩 */
+  --border-subtle: 226 232 240;
+  --text-primary: 15 23 42; /* slate-900 */
+  --text-secondary: 71 85 105; /* slate-600 */
+  --text-muted: 148 163 184; /* slate-400 */
+  --accent: 234 88 12; /* orange-600 (흰 위 대비) */
+  --accent-subtle: 255 237 213; /* orange-100 */
+  --accent-text: 255 255 255; /* 주황 위 흰 글자 */
+  --pr: 22 163 74; /* green-600 */
+  --danger: 220 38 38; /* red-600 */
+  --warn: 217 119 6; /* amber-600 */
+  color-scheme: light;
+}
+
+/* ── 다크 모드 토큰 (검정 베이스 + 밝은 주황 액센트) ── */
+.dark {
+  --bg: 14 15 17; /* #0E0F11 */
+  --surface-1: 22 24 28; /* #16181C */
+  --surface-2: 30 33 38; /* #1E2126 */
+  --surface-3: 38 42 48; /* #262A30 */
+  --border-subtle: 44 48 54; /* #2C3036 */
+  --text-primary: 242 244 247;
+  --text-secondary: 155 161 172;
+  --text-muted: 92 99 110;
+  --accent: 249 115 22; /* orange-500 */
+  --accent-subtle: 47 30 15; /* 다크 주황 틴트 */
+  --accent-text: 14 15 17; /* 주황 위 검정 글자 */
+  --pr: 52 211 153;
+  --danger: 248 113 113;
+  --warn: 251 191 36;
+  color-scheme: dark;
 }
 
 html,
@@ -16,7 +52,7 @@ body,
 }
 
 body {
-  @apply bg-white text-zinc-900 dark:bg-bg dark:text-text-primary;
+  @apply bg-bg text-text-primary;
 }
 
 /* 모든 동적 숫자(무게/횟수/타이머/합계) — 자릿수 정렬 */

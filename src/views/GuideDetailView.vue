@@ -30,6 +30,14 @@ watch(
 
 const primaryList = computed(() => (ex.value?.primaryMuscles || []).map((m) => muscles[m]).filter(Boolean))
 const secondaryList = computed(() => (ex.value?.secondaryMuscles || []).map((m) => muscles[m]).filter(Boolean))
+
+// 동작 영상: 종목별 지정 링크(ex.guide.refUrl)가 있으면 그것을, 없으면 YouTube 검색(항상 유효)
+const videoUrl = computed(() => {
+  if (!ex.value) return ''
+  const ref = ex.value.guide?.refUrl
+  if (ref) return ref
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.value.name + ' 자세 운동법')
+})
 </script>
 
 <template>
@@ -58,21 +66,31 @@ const secondaryList = computed(() => (ex.value?.secondaryMuscles || []).map((m) 
           <MuscleMap :side="side" :primary="ex.primaryMuscles" :secondary="ex.secondaryMuscles" />
         </div>
         <div class="mt-2 flex justify-center gap-4 text-caption">
-          <span class="flex items-center gap-1"><i class="inline-block h-3 w-3 rounded-sm" style="background:#3D7DFF" /> 주동근</span>
-          <span class="flex items-center gap-1"><i class="inline-block h-3 w-3 rounded-sm" style="background:rgba(61,125,255,0.4)" /> 협응근</span>
+          <span class="flex items-center gap-1"><i class="inline-block h-3 w-3 rounded-sm" style="background:rgb(var(--accent))" /> 주동근</span>
+          <span class="flex items-center gap-1"><i class="inline-block h-3 w-3 rounded-sm" style="background:rgb(var(--accent) / 0.4)" /> 협응근</span>
         </div>
       </div>
+
+      <!-- 동작 영상 -->
+      <a
+        :href="videoUrl"
+        target="_blank"
+        rel="noopener"
+        class="mt-3 flex items-center justify-center gap-2 rounded-card border border-border-subtle bg-surface-1 py-3 font-medium text-text-secondary transition-colors active:bg-surface-2"
+      >
+        <span class="text-danger">▶</span> 동작 영상 보기 (YouTube)
+      </a>
 
       <!-- 근육 설명 -->
       <div class="mt-4 rounded-card bg-surface-1 p-4">
         <h2 class="mb-2 text-h2 text-text-primary">타겟 근육</h2>
         <ul class="flex flex-col gap-2.5">
           <li v-for="m in primaryList" :key="m.id" class="flex gap-2">
-            <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" style="background:#3D7DFF" />
+            <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" style="background:rgb(var(--accent))" />
             <div><span class="font-medium text-text-primary">{{ m.name }}</span><span class="text-text-secondary"> — {{ m.desc }}</span></div>
           </li>
           <li v-for="m in secondaryList" :key="m.id" class="flex gap-2">
-            <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" style="background:rgba(61,125,255,0.4)" />
+            <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" style="background:rgb(var(--accent) / 0.4)" />
             <div><span class="font-medium text-text-secondary">{{ m.name }}</span><span class="text-text-muted"> — {{ m.desc }}</span></div>
           </li>
         </ul>

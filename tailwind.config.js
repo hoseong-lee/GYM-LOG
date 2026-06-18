@@ -1,33 +1,36 @@
 /** @type {import('tailwindcss').Config} */
-// 디자인 토큰: UX 리서치 합성 결과 (블랙 베이스 + 단일 전기블루 액센트 + tabular 큰 숫자).
+// 시맨틱 컬러 토큰은 CSS 변수(공백구분 RGB)로 정의(src/assets/styles/main.css)하고
+// 여기서 rgb(var(--x) / <alpha-value>) 패턴으로 노출한다 → 라이트/다크 자동 전환 + 알파 유틸 지원.
+const c = (v) => `rgb(var(${v}) / <alpha-value>)`
+
 export default {
   darkMode: 'class',
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
-        bg: '#0E0F11', // base 배경
+        bg: c('--bg'),
         surface: {
-          1: '#16181C', // 카드/탭바
-          2: '#1E2126', // 바텀시트/보조버튼
-          3: '#262A30' // 핸들/미선택 근육 실루엣
+          1: c('--surface-1'),
+          2: c('--surface-2'),
+          3: c('--surface-3')
         },
         border: {
-          subtle: '#2C3036'
+          subtle: c('--border-subtle')
         },
         text: {
-          primary: '#F2F4F7',
-          secondary: '#9BA1AC',
-          muted: '#5C636E'
+          primary: c('--text-primary'),
+          secondary: c('--text-secondary'),
+          muted: c('--text-muted')
         },
         accent: {
-          DEFAULT: '#3D7DFF', // 전기블루 (단일 액센트)
-          subtle: '#16233F', // accent 12% 틴트
-          text: '#0E0F11'
+          DEFAULT: c('--accent'),
+          subtle: c('--accent-subtle'),
+          text: c('--accent-text')
         },
-        pr: '#34D399', // success/PR
-        danger: '#F87171',
-        warn: '#FBBF24'
+        pr: c('--pr'),
+        danger: c('--danger'),
+        warn: c('--warn')
       },
       fontFamily: {
         sans: [
@@ -56,7 +59,7 @@ export default {
       },
       boxShadow: {
         sheet: '0 -8px 32px rgba(0,0,0,0.45)',
-        card: '0 1px 0 rgba(255,255,255,0.04)'
+        card: '0 1px 2px rgba(0,0,0,0.06)'
       },
       spacing: {
         tap: '44px',
