@@ -2,12 +2,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import MiniLineChart from '@/components/common/MiniLineChart.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
-import { getLogsRange } from '@/firebase/database'
+import { getLogsRange, getBodyRange, getDietDay, getWater } from '@/firebase/database'
 import { daysAgoKey, todayKey, formatDate } from '@/utils/date'
 import { currentStreak, isWorkoutDay, dayBodyParts, dayVolume } from '@/utils/stats'
 import { daysSincePart } from '@/utils/stats'
+import { toSeries, ema } from '@/utils/body'
+import { sumMeals } from '@/utils/nutrition'
 import { splits, DEFAULT_SPLIT } from '@/data/splits'
 import { bodyPartLabels } from '@/data/exercises'
 
@@ -15,14 +18,26 @@ const router = useRouter()
 const authStore = useAuthStore()
 const theme = useThemeStore()
 const recentLogs = ref({})
+const bodyRange = ref({})
+const todayDiet = ref(null)
+const todayWater = ref(0)
 const loaded = ref(false)
 
 const PARTS = ['chest', 'back', 'shoulder', 'legs', 'arms']
 
 onMounted(async () => {
   recentLogs.value = await getLogsRange(daysAgoKey(14), todayKey())
+  bodyRange.value = await getBodyRange(daysAgoKey(90), todayKey())
+  todayDiet.value = await getDietDay(todayKey())
+  todayWater.value = await getWater(todayKey())
   loaded.value = true
 })
+
+const weightSeries = computed(() => ema(toSeries(bodyRange.value, 'weightKg')))
+const proteinToday = computed(() => Math.round(sumMeals(todayDiet.value?.meals || {}).protein))
+const proteinTarget = computed(() => Number(authStore.profile?.dietTarget?.protein) || 0)
+const waterTarget = computed(() => Number(authStore.profile?.goals?.waterTargetMl) || 2000)
+const pct = (v, t) => (t > 0 ? Math.min(100, Math.round((v / t) * 100)) : 0)
 
 const name = computed(() => authStore.profile?.displayName || authStore.user?.displayName || '')
 const streak = computed(() => currentStreak(recentLogs.value))
@@ -98,6 +113,30 @@ const lastSession = computed(() => {
           <div class="text-caption text-text-muted">최근 7일</div>
         </div>
         <div class="ml-auto text-text-muted">›</div>
+      </button>
+
+      <!-- 체중 추세 -->
+      <button v-if="weightSeries.length" class="mt-3 w-full rounded-card bg-surface-1 p-4 text-left shadow-card active:bg-surface-2" @click="router.push('/body')">
+        <div class="mb-1 flex items-center justify-between">
+          <span class="text-unit text-text-muted">체중 추세</span>
+          <span class="num text-text-primary">{{ weightSeries[weightSeries.length - 1].value }} kg ›</span>
+        </div>
+        <MiniLineChart :series="weightSeries" color="accent" :height="56" />
+      </button>
+
+      <!-- 오늘 영양/수분 -->
+      <button class="mt-3 w-full rounded-card bg-surface-1 p-4 text-left shadow-card active:bg-surface-2" @click="router.push('/diet')">
+        <div class="text-unit text-text-muted">오늘 영양 · 수분</div>
+        <div class="mt-2 space-y-2">
+          <div>
+            <div class="mb-1 flex justify-between text-caption"><span class="text-accent">단백질</span><span class="num text-text-secondary">{{ proteinToday }}{{ proteinTarget ? ' / ' + proteinTarget : '' }} g</span></div>
+            <div class="h-2 overflow-hidden rounded-pill bg-surface-3"><div class="h-full rounded-pill bg-accent" :style="{ width: pct(proteinToday, proteinTarget || proteinToday || 1) + '%' }" /></div>
+          </div>
+          <div>
+            <div class="mb-1 flex justify-between text-caption"><span class="text-text-secondary">수분</span><span class="num text-text-secondary">{{ todayWater }} / {{ waterTarget }} ml</span></div>
+            <div class="h-2 overflow-hidden rounded-pill bg-surface-3"><div class="h-full rounded-pill bg-accent/70" :style="{ width: pct(todayWater, waterTarget) + '%' }" /></div>
+          </div>
+        </div>
       </button>
 
       <!-- 직전 세션 -->

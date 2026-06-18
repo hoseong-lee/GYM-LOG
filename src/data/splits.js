@@ -10,7 +10,17 @@ export const splits = {
       { name: '전신 A', bodyParts: ['chest', 'back', 'legs'] },
       { name: '전신 B', bodyParts: ['shoulder', 'legs', 'arms'] }
     ],
-    targetWeeklyFrequency: { chest: 2, back: 2, shoulder: 2, legs: 3, arms: 2 }
+    targetWeeklyFrequency: { chest: 2, back: 2, shoulder: 2, legs: 3, arms: 2 },
+    // 요일별 기본 매핑 (0=일 … 6=토). { sessionName } | { rest:true }
+    defaultWeekly: {
+      0: { rest: true },
+      1: { sessionName: '전신 A' },
+      2: { rest: true },
+      3: { sessionName: '전신 B' },
+      4: { rest: true },
+      5: { sessionName: '전신 A' },
+      6: { rest: true }
+    }
   },
 
   upperLower: {
@@ -20,7 +30,16 @@ export const splits = {
       { name: '상체', bodyParts: ['chest', 'back', 'shoulder', 'arms'] },
       { name: '하체', bodyParts: ['legs'] }
     ],
-    targetWeeklyFrequency: { chest: 2, back: 2, shoulder: 2, legs: 2, arms: 2 }
+    targetWeeklyFrequency: { chest: 2, back: 2, shoulder: 2, legs: 2, arms: 2 },
+    defaultWeekly: {
+      0: { rest: true },
+      1: { sessionName: '상체' },
+      2: { sessionName: '하체' },
+      3: { rest: true },
+      4: { sessionName: '상체' },
+      5: { sessionName: '하체' },
+      6: { rest: true }
+    }
   },
 
   ppl: {
@@ -32,7 +51,16 @@ export const splits = {
       { name: 'Pull', bodyParts: ['back', 'arms'] },
       { name: 'Legs', bodyParts: ['legs'] }
     ],
-    targetWeeklyFrequency: { chest: 2, back: 2, shoulder: 2, legs: 2, arms: 2 }
+    targetWeeklyFrequency: { chest: 2, back: 2, shoulder: 2, legs: 2, arms: 2 },
+    defaultWeekly: {
+      0: { rest: true },
+      1: { sessionName: 'Push' },
+      2: { sessionName: 'Pull' },
+      3: { sessionName: 'Legs' },
+      4: { sessionName: 'Push' },
+      5: { sessionName: 'Pull' },
+      6: { rest: true }
+    }
   },
 
   fourDay: {
@@ -44,7 +72,16 @@ export const splits = {
       { name: '어깨+팔', bodyParts: ['shoulder', 'arms'] },
       { name: '하체', bodyParts: ['legs'] }
     ],
-    targetWeeklyFrequency: { chest: 1, back: 1, shoulder: 1, legs: 1, arms: 2 }
+    targetWeeklyFrequency: { chest: 1, back: 1, shoulder: 1, legs: 1, arms: 2 },
+    defaultWeekly: {
+      0: { rest: true },
+      1: { sessionName: '가슴+삼두' },
+      2: { sessionName: '등+이두' },
+      3: { rest: true },
+      4: { sessionName: '어깨+팔' },
+      5: { sessionName: '하체' },
+      6: { rest: true }
+    }
   }
 }
 

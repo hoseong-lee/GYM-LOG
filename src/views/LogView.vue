@@ -1,180 +1,214 @@
 <script setup>
+// 기록 탭 — Planfit식 세션 러너.
+// mode: idle(시작화면) / plan(구성) / run(러너) / summary(요약)
+// activeSession(RTDB) 존재 시 자동 재개. 빠른기록(한 종목)은 보조 유지.
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import SessionStartCard from '@/components/record/SessionStartCard.vue'
+import RunnerPlanView from '@/components/record/RunnerPlanView.vue'
+import RunnerRunView from '@/components/record/RunnerRunView.vue'
+import SessionSummary from '@/components/record/SessionSummary.vue'
+import WeeklyPlanEditor from '@/components/record/WeeklyPlanEditor.vue'
 import ExercisePicker from '@/components/record/ExercisePicker.vue'
 import StrengthEditor from '@/components/record/StrengthEditor.vue'
 import CardioEditor from '@/components/record/CardioEditor.vue'
-import RestTimer from '@/components/record/RestTimer.vue'
-import { getDayLog, deleteEntry as dbDelete, setManualCheck } from '@/firebase/database'
-import { todayKey, formatDate, isToday, isFuture } from '@/utils/date'
-import { dayVolume, dayBodyParts } from '@/utils/stats'
-import { bodyPartLabels } from '@/data/exercises'
+import { getActiveSession, clearActiveSession, getWeeklyPlan } from '@/firebase/database'
+import { splits, DEFAULT_SPLIT } from '@/data/splits'
+import { exercisesByBodyPart } from '@/data/exercises'
+import { sessionStats } from '@/utils/session'
 import { resolveExKey } from '@/utils/exercise'
+import { todayKey, dayjs } from '@/utils/date'
+import { useAuthStore } from '@/stores/auth'
 import { pushToast } from '@/composables/useToast'
-import dayjs from 'dayjs'
 
-const date = ref(todayKey())
-const dayLog = ref(null)
-const loading = ref(false)
+const router = useRouter()
+const authStore = useAuthStore()
 
+const mode = ref('idle') // idle | plan | run | summary
+const session = ref(null) // activeSession 사본(반응형)
+const planSeed = ref(null) // 구성 진입 시드
+const summaryStats = ref(null)
+const loading = ref(true)
+
+const weeklyOpen = ref(false)
+const todayMapping = ref(null) // weeklyPlan.days[today] | null
+
+// 빠른 기록(보조)
 const pickerOpen = ref(false)
 const strengthOpen = ref(false)
 const cardioOpen = ref(false)
-const current = ref(null)
+const quickCurrent = ref(null)
 
-async function load() {
+const splitId = computed(() => authStore.split || DEFAULT_SPLIT)
+const splitObj = computed(() => splits[splitId.value] || splits[DEFAULT_SPLIT])
+
+// 오늘 요일 매핑 → 세션
+const todaySession = computed(() => {
+  const m = todayMapping.value
+  if (!m || m.rest) return null
+  return splitObj.value.sessions.find((s) => s.name === m.sessionName) || null
+})
+const isRestDay = computed(() => !!todayMapping.value?.rest)
+
+async function refresh() {
   loading.value = true
   try {
-    dayLog.value = await getDayLog(date.value)
+    const s = await getActiveSession()
+    if (s && s.status === 'running' && s.date === todayKey()) {
+      session.value = s
+      mode.value = 'run'
+    } else if (s) {
+      // 어제 등 잔존 세션 → 정리
+      await clearActiveSession()
+      session.value = null
+      mode.value = 'idle'
+    } else {
+      session.value = null
+      mode.value = 'idle'
+    }
+
+    const plan = await getWeeklyPlan()
+    const dow = dayjs().day()
+    if (plan && plan.splitId === splitId.value && plan.days?.[dow]) {
+      todayMapping.value = plan.days[dow]
+    } else {
+      todayMapping.value = splitObj.value.defaultWeekly?.[dow] || null
+    }
   } finally {
     loading.value = false
   }
 }
-onMounted(load)
+onMounted(refresh)
 
-function shiftDay(delta) {
-  if (delta > 0 && isToday(date.value)) return // 미래 금지
-  date.value = dayjs(date.value).add(delta, 'day').format('YYYY-MM-DD')
-  load()
+// activeSession 재조회(러너 갱신용) — 자식의 증분 update 후 호출
+async function reloadSession() {
+  session.value = await getActiveSession()
 }
 
-const strengthEntries = computed(() => {
-  const s = dayLog.value?.strength || {}
-  return Object.entries(s)
-    .map(([key, v]) => ({ key, ...v }))
-    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
-})
-const cardioEntries = computed(() => {
-  const c = dayLog.value?.cardio || {}
-  return Object.entries(c)
-    .map(([key, v]) => ({ key, ...v }))
-    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
-})
-const totalVolume = computed(() => Math.round(dayVolume(dayLog.value)))
-const parts = computed(() => dayBodyParts(dayLog.value).map((p) => bodyPartLabels[p] || p))
-const hasAny = computed(() => strengthEntries.value.length || cardioEntries.value.length)
-
-function onSelect(ex) {
-  current.value = ex
-  if (ex.bodyPart === 'cardio') cardioOpen.value = true
-  else strengthOpen.value = true
-}
-function onSelectCustom({ name, bodyPart }) {
-  current.value = {
-    id: resolveExKey(null, name),
-    name,
-    bodyPart,
-    increment: 2.5,
-    repRange: [8, 12]
+// ── 시작 화면 액션 ──
+function startFromRoutine() {
+  if (!todaySession.value) return
+  planSeed.value = {
+    sessionName: todaySession.value.name,
+    bodyParts: todaySession.value.bodyParts,
+    exKeys: autoPickExercises(todaySession.value.bodyParts),
+    splitId: splitId.value
   }
-  if (bodyPart === 'cardio') cardioOpen.value = true
-  else strengthOpen.value = true
+  mode.value = 'plan'
+}
+function startBlank() {
+  planSeed.value = null
+  mode.value = 'plan'
 }
 
-function setVol(e) {
-  return Math.round((e.sets || []).reduce((s, x) => s + (x.weight || 0) * (x.reps || 0), 0))
-}
-
-async function remove(kind, key) {
-  try {
-    await dbDelete(date.value, kind, key)
-    await load()
-  } catch (e) {
-    pushToast('삭제 실패: ' + (e?.message || e), 'error')
+// 부위별 컴파운드1 + 고립1, 총 4~6종목 상한
+function autoPickExercises(bodyParts) {
+  const keys = []
+  for (const part of bodyParts) {
+    const all = exercisesByBodyPart(part)
+    const compound = all.find((e) => e.pattern !== 'isolation' && e.pattern !== 'cardio')
+    const isolation = all.find((e) => e.pattern === 'isolation')
+    if (compound && !keys.includes(compound.id)) keys.push(compound.id)
+    if (isolation && !keys.includes(isolation.id)) keys.push(isolation.id)
   }
+  return keys.slice(0, 6)
 }
 
-async function markRest() {
-  await setManualCheck(date.value, true)
-  await load()
-  pushToast('휴식일로 출석 체크됨', 'info')
+// ── 러너 콜백 ──
+async function onStarted() {
+  await reloadSession()
+  mode.value = 'run'
+}
+function onPlanCancel() {
+  mode.value = 'idle'
+}
+function onRunFinish({ prCount } = {}) {
+  summaryStats.value = sessionStats(session.value, { prCount: prCount || 0, nowMs: Date.now() })
+  mode.value = 'summary'
+}
+async function onSummaryClose() {
+  await clearActiveSession()
+  session.value = null
+  summaryStats.value = null
+  mode.value = 'idle'
+  await refresh()
+}
+async function onSummaryViewLog() {
+  await onSummaryClose()
+  router.push('/')
+}
+// 자식(러너)이 activeSession 을 update 한 뒤 부모 사본 동기화
+async function onSessionMutated() {
+  await reloadSession()
 }
 </script>
 
 <template>
   <div>
-    <AppHeader title="기록" />
+    <!-- 러너/구성은 자체 헤더 사용 → idle/summary 에서만 공용 헤더 -->
+    <template v-if="mode === 'idle' || mode === 'summary'">
+      <AppHeader title="기록" />
+    </template>
 
-    <div class="px-gutter py-3">
-      <!-- 날짜 네비 -->
-      <div class="mb-4 flex items-center justify-between rounded-card bg-surface-1 px-2 py-2">
-        <button class="flex h-tap w-tap items-center justify-center rounded-pill text-text-secondary active:bg-surface-2" @click="shiftDay(-1)">‹</button>
-        <div class="text-center">
-          <div class="font-semibold text-text-primary">{{ isToday(date) ? '오늘' : formatDate(date, 'M월 D일 (ddd)') }}</div>
-          <div class="num text-caption text-text-muted">{{ date }}</div>
-        </div>
-        <button
-          class="flex h-tap w-tap items-center justify-center rounded-pill text-text-secondary active:bg-surface-2 disabled:opacity-30"
-          :disabled="isToday(date)"
-          @click="shiftDay(1)"
-        >›</button>
-      </div>
+    <!-- idle: 시작 화면 -->
+    <SessionStartCard
+      v-if="mode === 'idle' && !loading"
+      :today-session="todaySession"
+      :is-rest-day="isRestDay"
+      :split-label="splitObj.label"
+      @start-routine="startFromRoutine"
+      @start-blank="startBlank"
+      @quick-log="pickerOpen = true"
+      @edit-weekly="weeklyOpen = true"
+    />
 
-      <!-- 요약 -->
-      <div v-if="hasAny" class="mb-4 flex items-center gap-4 rounded-card bg-surface-1 px-4 py-3">
-        <div>
-          <div class="text-unit text-text-muted">총 볼륨</div>
-          <div class="num text-h2 text-text-primary">{{ totalVolume.toLocaleString() }}<span class="text-unit text-text-muted"> kg</span></div>
-        </div>
-        <div class="flex flex-wrap gap-1.5">
-          <span v-for="p in parts" :key="p" class="rounded-pill bg-surface-3 px-2.5 py-1 text-caption text-text-secondary">{{ p }}</span>
-        </div>
-      </div>
+    <!-- plan: 세션 구성 -->
+    <RunnerPlanView
+      v-else-if="mode === 'plan'"
+      :seed="planSeed"
+      :split-id="splitId"
+      @started="onStarted"
+      @cancel="onPlanCancel"
+    />
 
-      <!-- 근력 엔트리 -->
-      <div class="flex flex-col gap-3">
-        <div v-for="e in strengthEntries" :key="e.key" class="rounded-card bg-surface-1 p-4 shadow-card">
-          <div class="mb-2 flex items-start justify-between">
-            <div>
-              <div class="font-semibold text-text-primary">{{ e.name }}</div>
-              <div class="text-unit text-text-muted">{{ bodyPartLabels[e.bodyPart] || e.bodyPart }} · 볼륨 {{ setVol(e).toLocaleString() }}kg</div>
-            </div>
-            <button class="-mr-1 flex h-8 w-8 items-center justify-center text-text-muted active:text-danger" @click="remove('strength', e.key)">✕</button>
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            <span v-for="(s, i) in e.sets" :key="i" class="num rounded-field bg-surface-2 px-2.5 py-1 text-sm text-text-secondary">
-              {{ s.weight }}×{{ s.reps }}
-            </span>
-          </div>
-        </div>
+    <!-- run: 러너 -->
+    <RunnerRunView
+      v-else-if="mode === 'run' && session"
+      :session="session"
+      @finish="onRunFinish"
+      @abort="onSummaryClose"
+      @mutated="onSessionMutated"
+    />
 
-        <!-- 유산소 엔트리 -->
-        <div v-for="e in cardioEntries" :key="e.key" class="rounded-card bg-surface-1 p-4 shadow-card">
-          <div class="flex items-start justify-between">
-            <div>
-              <div class="font-semibold text-text-primary">{{ e.name }}</div>
-              <div class="num text-unit text-text-muted">
-                {{ e.minutes }}분<template v-if="e.distanceKm"> · {{ e.distanceKm }}km</template>
-                · {{ { low: '저강도', mid: '중강도', high: '고강도' }[e.intensity] || e.intensity }}
-              </div>
-            </div>
-            <button class="-mr-1 flex h-8 w-8 items-center justify-center text-text-muted active:text-danger" @click="remove('cardio', e.key)">✕</button>
-          </div>
-        </div>
-      </div>
+    <!-- summary -->
+    <SessionSummary
+      v-else-if="mode === 'summary' && summaryStats"
+      :stats="summaryStats"
+      @close="onSummaryClose"
+      @view-log="onSummaryViewLog"
+    />
 
-      <!-- 빈 상태 -->
-      <div v-if="!hasAny && !loading" class="mt-10 flex flex-col items-center text-center">
-        <p class="text-text-secondary">아직 기록이 없습니다.</p>
-        <p class="mt-1 text-caption text-text-muted">아래 버튼으로 첫 종목을 추가해보세요.</p>
-        <button v-if="dayLog?.manualCheck" disabled class="mt-4 rounded-pill bg-surface-2 px-4 py-2 text-caption text-text-muted">휴식일 인증됨</button>
-        <button v-else class="mt-4 rounded-pill border border-border-subtle px-4 py-2 text-caption text-text-secondary active:bg-surface-1" @click="markRest">
-          오늘은 쉬는 날로 체크
-        </button>
-      </div>
+    <!-- 요일 플랜 편집 -->
+    <WeeklyPlanEditor v-model="weeklyOpen" :split-id="splitId" @saved="refresh" />
 
-      <!-- 종목 추가 -->
-      <button
-        class="mt-6 w-full rounded-card bg-accent py-4 font-semibold text-accent-text shadow-card transition-transform duration-tap active:scale-[0.99]"
-        @click="pickerOpen = true"
-      >
-        ＋ 종목 추가
-      </button>
-    </div>
-
-    <ExercisePicker v-model="pickerOpen" @select="onSelect" @select-custom="onSelectCustom" />
-    <StrengthEditor v-model="strengthOpen" :exercise="current" :date="date" @saved="load" />
-    <CardioEditor v-model="cardioOpen" :exercise="current" :date="date" @saved="load" />
-    <RestTimer v-if="isToday(date)" />
+    <!-- 빠른 기록 (보조) -->
+    <ExercisePicker
+      v-model="pickerOpen"
+      @select="
+        (ex) => {
+          quickCurrent = ex
+          ex.bodyPart === 'cardio' ? (cardioOpen = true) : (strengthOpen = true)
+        }
+      "
+      @select-custom="
+        ({ name, bodyPart }) => {
+          quickCurrent = { id: resolveExKey(null, name), name, bodyPart, increment: 2.5, repRange: [8, 12] }
+          bodyPart === 'cardio' ? (cardioOpen = true) : (strengthOpen = true)
+        }
+      "
+    />
+    <StrengthEditor v-model="strengthOpen" :exercise="quickCurrent" :date="todayKey()" @saved="() => pushToast('기록 저장됨', 'info')" />
+    <CardioEditor v-model="cardioOpen" :exercise="quickCurrent" :date="todayKey()" @saved="() => pushToast('기록 저장됨', 'info')" />
   </div>
 </template>

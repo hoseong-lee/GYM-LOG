@@ -7,38 +7,38 @@
     'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   -webkit-tap-highlight-color: transparent;
 
-  /* ── 라이트 모드 토큰 (흰색 베이스 + 진한 주황 액센트) ── */
-  --bg: 248 250 252; /* slate-50 */
-  --surface-1: 255 255 255; /* 카드 = 흰색 */
-  --surface-2: 241 245 249;
-  --surface-3: 226 232 240; /* 핸들/실루엣/칩 */
-  --border-subtle: 226 232 240;
-  --text-primary: 15 23 42; /* slate-900 */
-  --text-secondary: 71 85 105; /* slate-600 */
-  --text-muted: 148 163 184; /* slate-400 */
-  --accent: 234 88 12; /* orange-600 (흰 위 대비) */
+  /* ── 라이트 모드 토큰 (순백 베이스 + 진한 주황 액센트) ── */
+  --bg: 255 255 255; /* white */
+  --surface-1: 250 250 250; /* 카드 */
+  --surface-2: 244 244 245;
+  --surface-3: 228 228 231; /* 핸들/실루엣/칩 */
+  --border-subtle: 229 231 235;
+  --text-primary: 23 23 23; /* ~16:1 */
+  --text-secondary: 64 64 64; /* ~10:1 */
+  --text-muted: 115 115 115; /* AA 본문 */
+  --accent: 234 88 12; /* orange-600 */
   --accent-subtle: 255 237 213; /* orange-100 */
   --accent-text: 255 255 255; /* 주황 위 흰 글자 */
-  --pr: 22 163 74; /* green-600 */
-  --danger: 220 38 38; /* red-600 */
-  --warn: 217 119 6; /* amber-600 */
+  --pr: 22 163 74; /* green-600 (PR/성공 — 액센트와 구분) */
+  --danger: 220 38 38;
+  --warn: 217 119 6;
   color-scheme: light;
 }
 
 /* ── 다크 모드 토큰 (검정 베이스 + 밝은 주황 액센트) ── */
 .dark {
-  --bg: 14 15 17; /* #0E0F11 */
-  --surface-1: 22 24 28; /* #16181C */
-  --surface-2: 30 33 38; /* #1E2126 */
-  --surface-3: 38 42 48; /* #262A30 */
-  --border-subtle: 44 48 54; /* #2C3036 */
-  --text-primary: 242 244 247;
-  --text-secondary: 155 161 172;
-  --text-muted: 92 99 110;
+  --bg: 10 10 10; /* #0A0A0A 검정 */
+  --surface-1: 23 23 23; /* #171717 카드 */
+  --surface-2: 38 38 38; /* #262626 */
+  --surface-3: 51 51 51; /* #333333 */
+  --border-subtle: 42 42 42; /* #2A2A2A */
+  --text-primary: 250 250 250;
+  --text-secondary: 212 212 212;
+  --text-muted: 163 163 163;
   --accent: 249 115 22; /* orange-500 */
-  --accent-subtle: 47 30 15; /* 다크 주황 틴트 */
-  --accent-text: 14 15 17; /* 주황 위 검정 글자 */
-  --pr: 52 211 153;
+  --accent-subtle: 67 20 7; /* #431407 어두운 주황 칩 */
+  --accent-text: 10 10 10; /* 주황 위 검정 글자 */
+  --pr: 52 211 153; /* emerald (PR/성공) */
   --danger: 248 113 113;
   --warn: 251 191 36;
   color-scheme: dark;

@@ -5,36 +5,11 @@ const route = useRoute()
 
 // 아이콘은 inline SVG path (24x24, stroke 기반)
 const tabs = [
-  {
-    name: 'home',
-    to: '/',
-    label: '홈',
-    path: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5'
-  },
-  {
-    name: 'log',
-    to: '/log',
-    label: '기록',
-    path: 'M6.5 6.5 9 4l11 11-2.5 2.5zM4 20l3-1-2-2zM14.5 9.5 9.5 14.5'
-  },
-  {
-    name: 'attendance',
-    to: '/attendance',
-    label: '출석',
-    path: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 9h16M8 3v4M16 3v4'
-  },
-  {
-    name: 'guide',
-    to: '/guide',
-    label: '가이드',
-    path: 'M12 6c-1.5-1.2-3.7-2-6-2-1 0-2 .2-2 .2v13s1-.2 2-.2c2.3 0 4.5.8 6 2 1.5-1.2 3.7-2 6-2 1 0 2 .2 2 .2v-13s-1-.2-2-.2c-2.3 0-4.5.8-6 2zM12 6v14'
-  },
-  {
-    name: 'recommend',
-    to: '/recommend',
-    label: '추천',
-    path: 'M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z'
-  }
+  { name: 'home', to: '/', label: '홈', path: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5' },
+  { name: 'log', to: '/log', label: '기록', path: 'M6.5 6.5 9 4l11 11-2.5 2.5zM4 20l3-1-2-2zM14.5 9.5 9.5 14.5' },
+  { name: 'diet', to: '/diet', label: '식단', path: 'M7 3v8a3 3 0 0 0 6 0V3M10 11v10M17 3c-1.5 1-2 3-2 6 0 2 1 3 2 3v9' },
+  { name: 'body', to: '/body', label: '내몸', path: 'M12 4a2 2 0 1 0 0-.01M9 8h6l-1 6h-1v6h-2v-6H10z' },
+  { name: 'more', to: '/more', label: '더보기', path: 'M4 7h16M4 12h16M4 17h16' }
 ]
 
 function isActive(tab) {
