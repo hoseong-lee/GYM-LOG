@@ -7,6 +7,7 @@ import PlanExerciseRow from '@/components/record/PlanExerciseRow.vue'
 import WeeklyPlanEditor from '@/components/record/WeeklyPlanEditor.vue'
 import BottomSheet from '@/components/common/BottomSheet.vue'
 import { getExercise } from '@/data/exercises'
+import { SEED_SETS, SEED_REPS } from '@/data/splits'
 import { getLastForExercise, setActiveSession, saveRoutine } from '@/firebase/database'
 import { defaultRestForPattern } from '@/utils/rest'
 import { plannedFromLast } from '@/utils/session'
@@ -46,7 +47,8 @@ async function makeRow(exKey, fallback = {}) {
     bodyPart: ex.bodyPart,
     step: ex.increment || 2.5,
     restSec: defaultRestForPattern(ex.pattern),
-    planned: { targetSets: 3, weight: pl.weight, reps: pl.reps },
+    // 전 종목 기본 12회×4세트 — 무게만 직전 기록 기반 추천. (세션 중 자유 조정)
+    planned: { targetSets: SEED_SETS, weight: pl.weight, reps: SEED_REPS },
     prev
   }
 }
@@ -79,7 +81,7 @@ async function makeRowFromItem(item) {
     bodyPart: ex.bodyPart,
     step: ex.increment || 2.5,
     restSec: item.restSec ?? defaultRestForPattern(ex.pattern),
-    planned: { targetSets: item.planned?.targetSets || 3, weight, reps },
+    planned: { targetSets: item.planned?.targetSets || SEED_SETS, weight, reps },
     prev
   }
 }

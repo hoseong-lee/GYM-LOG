@@ -14,7 +14,7 @@ import ExercisePicker from '@/components/record/ExercisePicker.vue'
 import StrengthEditor from '@/components/record/StrengthEditor.vue'
 import CardioEditor from '@/components/record/CardioEditor.vue'
 import { getActiveSession, clearActiveSession, getWeeklyPlan, listRoutines, getLogsRange } from '@/firebase/database'
-import { splits, DEFAULT_SPLIT } from '@/data/splits'
+import { splits, DEFAULT_SPLIT, SEED_SETS, SEED_REPS } from '@/data/splits'
 import { exercisesByBodyPart, bodyPartLabels } from '@/data/exercises'
 import { sessionStats, sessionFromDayLog } from '@/utils/session'
 import { dayBodyParts } from '@/utils/stats'
@@ -124,10 +124,14 @@ async function reloadSession() {
 // ── 시작 화면 액션 ──
 function startFromRoutine() {
   if (!todaySession.value) return
+  // 분할 세션에 종목 시드가 있으면 그대로(전 종목 12회×4세트), 없으면 부위 기반 autoPick
+  const seedEx = todaySession.value.exercises
   planSeed.value = {
     sessionName: todaySession.value.name,
     bodyParts: todaySession.value.bodyParts,
-    exKeys: autoPickExercises(todaySession.value.bodyParts),
+    ...(seedEx?.length
+      ? { fullItems: seedEx.map((k) => ({ exKey: k, planned: { targetSets: SEED_SETS, reps: SEED_REPS } })) }
+      : { exKeys: autoPickExercises(todaySession.value.bodyParts) }),
     splitId: splitId.value
   }
   mode.value = 'plan'

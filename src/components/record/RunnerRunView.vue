@@ -2,13 +2,15 @@
 // 세션 러너 본체. 상태기계 호스트.
 //  RUNNING_SET → (세트 체크) → RESTING → (끝/스킵) → 다음 세트 / 다음 종목 / 요약
 // 세트 체크는 activeSession 증분 update. 종목 완료 시 saveStrengthEntry 로 flush.
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import SetRow from '@/components/record/SetRow.vue'
 import RestOverlay from '@/components/record/RestOverlay.vue'
 import ExercisePicker from '@/components/record/ExercisePicker.vue'
 import BottomSheet from '@/components/common/BottomSheet.vue'
 import ExerciseDemo from '@/components/guide/ExerciseDemo.vue'
+import MuscleMap from '@/components/guide/MuscleMap.vue'
 import { bodyPartLabels, getExercise } from '@/data/exercises'
+import { muscles } from '@/data/muscles'
 import { updateActiveSession, saveStrengthEntry } from '@/firebase/database'
 import { sortedExercises, doneSetsOf } from '@/utils/session'
 import { defaultRestForPattern, formatRest } from '@/utils/rest'
@@ -76,8 +78,23 @@ const prCount = ref(0)
 
 // ── 가이드 시트 ──
 const guideOpen = ref(false)
-const guide = computed(() => getExercise(current.value?.exKey || '')?.guide || null)
-const demoId = computed(() => getExercise(current.value?.exKey || '')?.demoId || '')
+const guideEx = computed(() => getExercise(current.value?.exKey || '') || null)
+const guide = computed(() => guideEx.value?.guide || null)
+const demoId = computed(() => guideEx.value?.demoId || '')
+// 타겟 근육 모형 — 주동근이 후면에 많으면 후면도(默)로 자동 전환, 사용자가 토글 가능
+const muscleSide = ref('front')
+const hasMuscleMap = computed(() => (guideEx.value?.primaryMuscles || []).length > 0)
+watch(
+  guideEx,
+  (e) => {
+    if (!e) return
+    const views = (e.primaryMuscles || []).map((m) => muscles[m]?.view)
+    const back = views.filter((v) => v === 'back').length
+    const front = views.filter((v) => v === 'front').length
+    muscleSide.value = back > front ? 'back' : 'front'
+  },
+  { immediate: true }
+)
 
 // ── 추가 종목 picker ──
 const pickerOpen = ref(false)
@@ -342,24 +359,57 @@ const progressDots = computed(() => list.value.map((_, i) => i <= idx.value))
 
     <!-- 가이드 시트 -->
     <BottomSheet v-model="guideOpen" :title="current?.name || '가이드'">
-      <ExerciseDemo v-if="demoId" :demo-id="demoId" class="mb-3" />
-      <div v-if="guide" class="flex flex-col gap-3 pb-3">
-        <div v-if="guide.target">
-          <div class="text-unit text-text-muted">타깃</div>
-          <p class="text-text-secondary">{{ guide.target }}</p>
+      <div class="flex flex-col gap-4 pb-3">
+        <!-- 동작 시연 + 타겟 근육 모형 -->
+        <div v-if="demoId || hasMuscleMap" class="flex gap-3">
+          <ExerciseDemo v-if="demoId" :demo-id="demoId" class="min-w-0 flex-1" />
+          <div v-if="hasMuscleMap" class="flex w-[120px] shrink-0 flex-col items-center rounded-card bg-surface-2 p-2">
+            <div class="mx-auto w-full max-w-[92px]">
+              <MuscleMap :side="muscleSide" :primary="guideEx.primaryMuscles" :secondary="guideEx.secondaryMuscles || []" />
+            </div>
+            <div class="mt-1.5 flex gap-1">
+              <button
+                v-for="s in [{ v: 'front', l: '정면' }, { v: 'back', l: '후면' }]"
+                :key="s.v"
+                class="rounded-pill px-2 py-0.5 text-caption font-medium transition-colors"
+                :class="muscleSide === s.v ? 'bg-accent text-accent-text' : 'bg-surface-1 text-text-secondary'"
+                @click="muscleSide = s.v"
+              >
+                {{ s.l }}
+              </button>
+            </div>
+          </div>
         </div>
-        <div v-if="guide.cues?.length">
-          <div class="text-unit text-text-muted">순서</div>
-          <ol class="ml-4 list-decimal text-text-secondary">
-            <li v-for="(c, i) in guide.cues" :key="i" class="py-0.5">{{ c }}</li>
-          </ol>
-        </div>
-        <div v-if="guide.mistakes?.length">
-          <div class="text-unit text-text-muted">흔한 실수</div>
-          <ul class="ml-4 list-disc text-text-secondary">
-            <li v-for="(m, i) in guide.mistakes" :key="i" class="py-0.5">{{ m }}</li>
-          </ul>
-        </div>
+
+        <!-- 가이드 텍스트 (가독성: 카드 분리 + 줄간격 + 단계 배지) -->
+        <template v-if="guide">
+          <div v-if="guide.target" class="rounded-card bg-surface-1 p-3">
+            <div class="mb-1 text-unit font-semibold text-accent">🎯 타깃</div>
+            <p class="leading-relaxed text-text-secondary">{{ guide.target }}</p>
+          </div>
+          <div v-if="guide.cues?.length" class="rounded-card bg-surface-1 p-3">
+            <div class="mb-2 text-unit font-semibold text-text-primary">동작 순서</div>
+            <ol class="flex flex-col gap-2.5">
+              <li v-for="(c, i) in guide.cues" :key="i" class="flex gap-2.5">
+                <span class="num flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-accent-subtle text-caption font-semibold text-accent">{{ i + 1 }}</span>
+                <span class="leading-relaxed text-text-secondary">{{ c }}</span>
+              </li>
+            </ol>
+          </div>
+          <div v-if="guide.mistakes?.length" class="rounded-card bg-surface-1 p-3">
+            <div class="mb-2 text-unit font-semibold text-warn">흔한 실수</div>
+            <ul class="flex flex-col gap-2">
+              <li v-for="(m, i) in guide.mistakes" :key="i" class="flex gap-2">
+                <span class="shrink-0 text-warn">⚠</span>
+                <span class="leading-relaxed text-text-secondary">{{ m }}</span>
+              </li>
+            </ul>
+          </div>
+          <div v-if="guide.breathing" class="rounded-card bg-surface-1 p-3">
+            <div class="mb-1 text-unit font-semibold text-text-primary">호흡</div>
+            <p class="leading-relaxed text-text-secondary">{{ guide.breathing }}</p>
+          </div>
+        </template>
       </div>
     </BottomSheet>
 

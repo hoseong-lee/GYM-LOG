@@ -185,33 +185,33 @@ const videoUrl = computed(() => {
       <!-- 가이드 -->
       <template v-if="ex.guide">
         <div class="mt-4 rounded-card bg-surface-1 p-4">
-          <h2 class="mb-2 text-h2 text-text-primary">동작 큐</h2>
-          <ol class="flex flex-col gap-2">
-            <li v-for="(c, i) in ex.guide.cues" :key="i" class="flex gap-2.5">
+          <h2 class="mb-3 text-h2 text-text-primary">동작 순서</h2>
+          <ol class="flex flex-col gap-3">
+            <li v-for="(c, i) in ex.guide.cues" :key="i" class="flex gap-3">
               <span class="num flex h-6 w-6 shrink-0 items-center justify-center rounded-pill bg-accent-subtle text-caption font-semibold text-accent">{{ i + 1 }}</span>
-              <span class="pt-0.5 text-text-secondary">{{ c }}</span>
+              <span class="pt-0.5 leading-relaxed text-text-secondary">{{ c }}</span>
             </li>
           </ol>
         </div>
 
-        <div class="mt-4 rounded-card bg-surface-1 p-4">
-          <h2 class="mb-1 text-h2 text-text-primary">이런 느낌이어야</h2>
-          <p class="text-text-secondary">{{ ex.guide.feel }}</p>
+        <div class="mt-4 rounded-card bg-accent-subtle p-4">
+          <h2 class="mb-1 text-h2 text-accent">💡 이런 느낌이어야</h2>
+          <p class="leading-relaxed text-text-secondary">{{ ex.guide.feel }}</p>
         </div>
 
         <div class="mt-4 rounded-card bg-surface-1 p-4">
-          <h2 class="mb-2 text-h2 text-text-primary">흔한 실수</h2>
-          <ul class="flex flex-col gap-2">
+          <h2 class="mb-2 text-h2 text-warn">⚠ 흔한 실수</h2>
+          <ul class="flex flex-col gap-2.5">
             <li v-for="(m, i) in ex.guide.mistakes" :key="i" class="flex gap-2">
-              <span class="shrink-0 text-warn">⚠</span>
-              <span class="text-text-secondary">{{ m }}</span>
+              <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-warn" />
+              <span class="leading-relaxed text-text-secondary">{{ m }}</span>
             </li>
           </ul>
         </div>
 
         <div class="mt-4 rounded-card bg-surface-1 p-4">
-          <h2 class="mb-1 text-h2 text-text-primary">호흡</h2>
-          <p class="text-text-secondary">{{ ex.guide.breathing }}</p>
+          <h2 class="mb-1 text-h2 text-text-primary">🫁 호흡</h2>
+          <p class="leading-relaxed text-text-secondary">{{ ex.guide.breathing }}</p>
         </div>
       </template>
 
