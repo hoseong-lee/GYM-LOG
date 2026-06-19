@@ -18,6 +18,7 @@ export const bodyPartLabels = {
 export const exercises = {
   'barbell-bench-press': {
     id: 'barbell-bench-press',
+    demoId: 'Barbell_Bench_Press_-_Medium_Grip',
     name: '바벨 벤치프레스',
     bodyPart: 'chest',
     equipment: 'barbell',
@@ -49,6 +50,7 @@ export const exercises = {
 
   'back-squat': {
     id: 'back-squat',
+    demoId: 'Barbell_Squat',
     name: '바벨 백스쿼트',
     bodyPart: 'legs',
     equipment: 'barbell',
@@ -80,6 +82,7 @@ export const exercises = {
   },
 'overhead-press': {
     id: 'overhead-press',
+    demoId: 'Standing_Military_Press',
     name: '바벨 오버헤드 프레스',
     bodyPart: 'shoulder',
     equipment: 'barbell',
@@ -109,6 +112,7 @@ export const exercises = {
   },
   'dumbbell-shoulder-press': {
     id: 'dumbbell-shoulder-press',
+    demoId: 'Dumbbell_Shoulder_Press',
     name: '덤벨 숄더 프레스',
     bodyPart: 'shoulder',
     equipment: 'dumbbell',
@@ -138,6 +142,7 @@ export const exercises = {
   },
   'lateral-raise': {
     id: 'lateral-raise',
+    demoId: 'Side_Lateral_Raise',
     name: '덤벨 레터럴 레이즈',
     bodyPart: 'shoulder',
     equipment: 'dumbbell',
@@ -167,6 +172,7 @@ export const exercises = {
   },
   'rear-delt-fly': {
     id: 'rear-delt-fly',
+    demoId: 'Reverse_Flyes',
     name: '리어 델트 플라이',
     bodyPart: 'shoulder',
     equipment: 'dumbbell',
@@ -196,6 +202,7 @@ export const exercises = {
   },
   'cable-face-pull': {
     id: 'cable-face-pull',
+    demoId: 'Face_Pull',
     name: '케이블 페이스 풀',
     bodyPart: 'shoulder',
     equipment: 'cable',
@@ -225,6 +232,7 @@ export const exercises = {
   },
 'incline-dumbbell-press': {
     id: 'incline-dumbbell-press',
+    demoId: 'Incline_Dumbbell_Press',
     name: '인클라인 덤벨 프레스',
     bodyPart: 'chest',
     equipment: 'dumbbell',
@@ -254,6 +262,7 @@ export const exercises = {
   },
   'dumbbell-fly': {
     id: 'dumbbell-fly',
+    demoId: 'Dumbbell_Flyes',
     name: '덤벨 플라이',
     bodyPart: 'chest',
     equipment: 'dumbbell',
@@ -283,6 +292,7 @@ export const exercises = {
   },
   'machine-chest-press': {
     id: 'machine-chest-press',
+    demoId: 'Leverage_Chest_Press',
     name: '머신 체스트 프레스',
     bodyPart: 'chest',
     equipment: 'machine',
@@ -312,6 +322,7 @@ export const exercises = {
   },
   'cable-crossover': {
     id: 'cable-crossover',
+    demoId: 'Cable_Crossover',
     name: '케이블 크로스오버',
     bodyPart: 'chest',
     equipment: 'cable',
@@ -341,6 +352,7 @@ export const exercises = {
   },
 'deadlift': {
     id: 'deadlift',
+    demoId: 'Barbell_Deadlift',
     name: '컨벤셔널 데드리프트',
     bodyPart: 'back',
     equipment: 'barbell',
@@ -371,6 +383,7 @@ export const exercises = {
   },
   'pull-up': {
     id: 'pull-up',
+    demoId: 'Pullups',
     name: '풀업(턱걸이)',
     bodyPart: 'back',
     equipment: 'bodyweight',
@@ -400,6 +413,7 @@ export const exercises = {
   },
   'lat-pulldown': {
     id: 'lat-pulldown',
+    demoId: 'Wide-Grip_Lat_Pulldown',
     name: '랫 풀다운',
     bodyPart: 'back',
     equipment: 'cable',
@@ -429,6 +443,7 @@ export const exercises = {
   },
   'barbell-row': {
     id: 'barbell-row',
+    demoId: 'Bent_Over_Barbell_Row',
     name: '바벨 로우',
     bodyPart: 'back',
     equipment: 'barbell',
@@ -458,6 +473,7 @@ export const exercises = {
   },
   'seated-cable-row': {
     id: 'seated-cable-row',
+    demoId: 'Seated_Cable_Rows',
     name: '시티드 케이블 로우',
     bodyPart: 'back',
     equipment: 'cable',
@@ -487,6 +503,7 @@ export const exercises = {
   },
   'dumbbell-row': {
     id: 'dumbbell-row',
+    demoId: 'One-Arm_Dumbbell_Row',
     name: '원암 덤벨 로우',
     bodyPart: 'back',
     equipment: 'dumbbell',
@@ -516,6 +533,7 @@ export const exercises = {
   },
 'romanian-deadlift': {
     id: 'romanian-deadlift',
+    demoId: 'Romanian_Deadlift',
     name: '루마니안 데드리프트',
     bodyPart: 'legs',
     equipment: 'barbell',
@@ -545,6 +563,7 @@ export const exercises = {
   },
   'leg-press': {
     id: 'leg-press',
+    demoId: 'Leg_Press',
     name: '레그 프레스',
     bodyPart: 'legs',
     equipment: 'machine',
@@ -574,6 +593,7 @@ export const exercises = {
   },
   'leg-extension': {
     id: 'leg-extension',
+    demoId: 'Leg_Extensions',
     name: '레그 익스텐션',
     bodyPart: 'legs',
     equipment: 'machine',
@@ -603,6 +623,7 @@ export const exercises = {
   },
   'lying-leg-curl': {
     id: 'lying-leg-curl',
+    demoId: 'Lying_Leg_Curls',
     name: '라잉 레그 컬',
     bodyPart: 'legs',
     equipment: 'machine',
@@ -632,6 +653,7 @@ export const exercises = {
   },
   'standing-calf-raise': {
     id: 'standing-calf-raise',
+    demoId: 'Standing_Calf_Raises',
     name: '스탠딩 카프 레이즈',
     bodyPart: 'legs',
     equipment: 'machine',
@@ -661,6 +683,7 @@ export const exercises = {
   },
 'barbell-curl': {
     id: 'barbell-curl',
+    demoId: 'Barbell_Curl',
     name: '바벨 컬',
     bodyPart: 'arms',
     equipment: 'barbell',
@@ -690,6 +713,7 @@ export const exercises = {
   },
   'dumbbell-curl': {
     id: 'dumbbell-curl',
+    demoId: 'Dumbbell_Bicep_Curl',
     name: '덤벨 컬',
     bodyPart: 'arms',
     equipment: 'dumbbell',
@@ -719,6 +743,7 @@ export const exercises = {
   },
   'hammer-curl': {
     id: 'hammer-curl',
+    demoId: 'Hammer_Curls',
     name: '해머 컬',
     bodyPart: 'arms',
     equipment: 'dumbbell',
@@ -748,6 +773,7 @@ export const exercises = {
   },
   'triceps-pushdown': {
     id: 'triceps-pushdown',
+    demoId: 'Triceps_Pushdown',
     name: '케이블 트라이셉스 푸시다운',
     bodyPart: 'arms',
     equipment: 'cable',
@@ -777,6 +803,7 @@ export const exercises = {
   },
   'lying-triceps-extension': {
     id: 'lying-triceps-extension',
+    demoId: 'Lying_Triceps_Press',
     name: '라잉 트라이셉스 익스텐션',
     bodyPart: 'arms',
     equipment: 'barbell',
@@ -806,6 +833,7 @@ export const exercises = {
   },
 'treadmill-run': {
     id: 'treadmill-run',
+    demoId: 'Running_Treadmill',
     name: '트레드밀 러닝',
     bodyPart: 'cardio',
     equipment: 'machine',
@@ -837,6 +865,7 @@ export const exercises = {
   },
   'incline-walk': {
     id: 'incline-walk',
+    demoId: 'Walking_Treadmill',
     name: '경사 빠르게 걷기',
     bodyPart: 'cardio',
     equipment: 'machine',
@@ -868,6 +897,7 @@ export const exercises = {
   },
   'stationary-bike': {
     id: 'stationary-bike',
+    demoId: 'Bicycling_Stationary',
     name: '실내 사이클',
     bodyPart: 'cardio',
     equipment: 'machine',
@@ -899,6 +929,7 @@ export const exercises = {
   },
   'rowing-machine': {
     id: 'rowing-machine',
+    demoId: 'Rowing_Stationary',
     name: '로잉 머신',
     bodyPart: 'cardio',
     equipment: 'machine',

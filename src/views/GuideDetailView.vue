@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import MuscleMap from '@/components/guide/MuscleMap.vue'
+import ExerciseDemo from '@/components/guide/ExerciseDemo.vue'
 import MiniLineChart from '@/components/common/MiniLineChart.vue'
 import { getExercise, bodyPartLabels } from '@/data/exercises'
 import { muscles } from '@/data/muscles'
@@ -132,6 +133,8 @@ const videoUrl = computed(() => {
 
       <!-- ── 가이드 ── -->
       <template v-else>
+      <!-- 동작 시연 -->
+      <ExerciseDemo v-if="ex.demoId" :demo-id="ex.demoId" :label="ex.name" class="mb-3" />
       <!-- 바디맵 -->
       <div class="rounded-card bg-surface-1 p-4">
         <div class="mb-2 flex justify-center gap-2">

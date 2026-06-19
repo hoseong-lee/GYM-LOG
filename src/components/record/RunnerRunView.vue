@@ -7,6 +7,7 @@ import SetRow from '@/components/record/SetRow.vue'
 import RestOverlay from '@/components/record/RestOverlay.vue'
 import ExercisePicker from '@/components/record/ExercisePicker.vue'
 import BottomSheet from '@/components/common/BottomSheet.vue'
+import ExerciseDemo from '@/components/guide/ExerciseDemo.vue'
 import { bodyPartLabels, getExercise } from '@/data/exercises'
 import { updateActiveSession, saveStrengthEntry } from '@/firebase/database'
 import { sortedExercises, doneSetsOf } from '@/utils/session'
@@ -76,6 +77,7 @@ const prCount = ref(0)
 // ── 가이드 시트 ──
 const guideOpen = ref(false)
 const guide = computed(() => getExercise(current.value?.exKey || '')?.guide || null)
+const demoId = computed(() => getExercise(current.value?.exKey || '')?.demoId || '')
 
 // ── 추가 종목 picker ──
 const pickerOpen = ref(false)
@@ -340,6 +342,7 @@ const progressDots = computed(() => list.value.map((_, i) => i <= idx.value))
 
     <!-- 가이드 시트 -->
     <BottomSheet v-model="guideOpen" :title="current?.name || '가이드'">
+      <ExerciseDemo v-if="demoId" :demo-id="demoId" class="mb-3" />
       <div v-if="guide" class="flex flex-col gap-3 pb-3">
         <div v-if="guide.target">
           <div class="text-unit text-text-muted">타깃</div>
