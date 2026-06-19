@@ -1,6 +1,6 @@
 // GYM LOG 메인 Service Worker — 정적 자산 캐싱 + 오프라인 fallback.
 // 새 배포 시 CACHE 버전을 올려 자동 활성화.
-const CACHE = 'gymlog-v1'
+const CACHE = 'gymlog-v2'
 const BASE = '/GYM-LOG/'
 const PRECACHE = [
   BASE,
@@ -31,6 +31,9 @@ self.addEventListener('fetch', (event) => {
   const req = event.request
   if (req.method !== 'GET') return
   const url = new URL(req.url)
+
+  // http(s) 외 scheme(chrome-extension 등)은 Cache API가 거부하므로 가로채지 않는다.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return
 
   const isExternalApi = /(firebaseio|firebasestorage|googleapis|gstatic)/.test(url.hostname)
   if (isExternalApi) {
