@@ -105,6 +105,15 @@ function setRowState(i) {
   return 'pending'
 }
 
+// 프리필 칩용 — i번째 세트 이전의 마지막 완료 세트 값
+function lastDoneSet(i) {
+  const sets = currentSets.value
+  for (let j = i - 1; j >= 0; j--) {
+    if (sets[j]?.done) return { weight: sets[j].weight, reps: sets[j].reps }
+  }
+  return null
+}
+
 // 현재 종목의 RTDB 키
 function curKey() {
   return current.value?.k
@@ -310,6 +319,8 @@ const progressDots = computed(() => list.value.map((_, i) => i <= idx.value))
           :state="setRowState(i)"
           :step="current.step || getExercise(current.exKey)?.increment || 2.5"
           :plate-set="getExercise(current.exKey)?.equipment === 'barbell' ? plateSet : null"
+          :prev-record="current.prev"
+          :last-set-vals="lastDoneSet(i)"
           @check="onCheck(i, $event)"
           @uncheck="onUncheck(i)"
           @update="onUpdateSet(i, $event)"

@@ -10,7 +10,7 @@ import { getExercise } from '@/data/exercises'
 import { SEED_SETS, SEED_REPS } from '@/data/splits'
 import { getLastForExercise, setActiveSession, saveRoutine } from '@/firebase/database'
 import { defaultRestForPattern } from '@/utils/rest'
-import { plannedFromLast } from '@/utils/session'
+import { plannedFromLast, estimateSessionMinutes } from '@/utils/session'
 import { resolveExKey } from '@/utils/exercise'
 import { todayKey } from '@/utils/date'
 import { pushToast } from '@/composables/useToast'
@@ -158,6 +158,7 @@ function moveRow(i, delta) {
 }
 
 const canStart = computed(() => draft.value.length > 0)
+const estMin = computed(() => estimateSessionMinutes(draft.value))
 
 async function start() {
   if (!canStart.value) return
@@ -225,6 +226,7 @@ async function start() {
       <div class="mb-3 flex items-center justify-between">
         <span class="text-unit text-text-muted">
           {{ seed?.sessionName ? `${seed.sessionName} 시드` : '직접 구성' }}
+          <span v-if="draft.length" class="text-text-secondary">· 예상 {{ estMin }}분</span>
         </span>
         <button class="text-caption text-accent active:opacity-70" @click="weeklyOpen = true">요일 플랜</button>
       </div>

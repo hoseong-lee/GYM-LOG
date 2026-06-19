@@ -57,6 +57,17 @@ function round(v) {
   return Math.round(v * 100) / 100
 }
 
+// 세션 구성(draft) 예상 소요시간(분). 세트당 작업 ~45초 + 종목별 휴식×(세트-1).
+// 순수 계산(저장/조회 없음) — 종목·세트·휴식 조정 시 즉시 갱신용.
+export function estimateSessionMinutes(rows) {
+  let sec = 0
+  for (const r of rows || []) {
+    const sets = r.planned?.targetSets || 0
+    sec += sets * 45 + (r.restSec || 0) * Math.max(0, sets - 1)
+  }
+  return Math.round(sec / 60)
+}
+
 // 종목의 완료(done) 세트만 정제 → saveStrengthEntry 용 [{weight,reps}]
 export function doneSetsOf(ex) {
   return (ex.sets || [])

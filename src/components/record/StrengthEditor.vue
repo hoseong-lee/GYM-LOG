@@ -3,6 +3,7 @@ import { ref, watch, computed } from 'vue'
 import BottomSheet from '@/components/common/BottomSheet.vue'
 import NumberStepper from '@/components/common/NumberStepper.vue'
 import { getLastForExercise, saveStrengthEntry } from '@/firebase/database'
+import { getExercise } from '@/data/exercises'
 import { pushToast } from '@/composables/useToast'
 import { fromNow } from '@/utils/date'
 
@@ -16,6 +17,10 @@ const emit = defineEmits(['update:modelValue', 'saved'])
 const sets = ref([{ weight: 20, reps: 10 }])
 const prev = ref(null)
 const saving = ref(false)
+
+// 동작 가이드(접이식) — 빠른기록 중에도 라우트 이탈 없이 폼 확인
+const guide = computed(() => getExercise(props.exercise?.id || '')?.guide || null)
+const showGuide = ref(false)
 
 const step = computed(() => props.exercise?.increment || 2.5)
 const repHi = computed(() => props.exercise?.repRange?.[1] || 10)
@@ -39,6 +44,7 @@ watch(
   () => [props.modelValue, props.exercise?.id],
   async ([open]) => {
     if (open && props.exercise) {
+      showGuide.value = false
       prev.value = await getLastForExercise(props.exercise.id)
       if (prev.value) {
         sets.value = [{ weight: prev.value.lastWeight ?? 20, reps: prev.value.lastReps ?? 10 }]
@@ -116,6 +122,37 @@ async function save() {
         목표 {{ suggestion.weight }}kg×{{ suggestion.reps }} ({{ suggestion.label }})
       </button>
     </div>
+
+    <!-- 동작 가이드 (접이식) -->
+    <template v-if="guide">
+      <button
+        class="mb-3 flex w-full items-center justify-between rounded-field bg-surface-1 px-4 py-3 text-left transition-colors active:bg-surface-2"
+        @click="showGuide = !showGuide"
+      >
+        <span class="text-sm font-medium text-text-secondary">📖 동작 가이드</span>
+        <span class="text-text-muted">{{ showGuide ? '▲' : '▼' }}</span>
+      </button>
+      <div v-if="showGuide" class="mb-3 flex flex-col gap-3 rounded-card bg-surface-1 p-3">
+        <div v-if="guide.cues?.length">
+          <div class="mb-1.5 text-unit font-semibold text-text-primary">동작 순서</div>
+          <ol class="flex flex-col gap-2">
+            <li v-for="(c, i) in guide.cues" :key="i" class="flex gap-2">
+              <span class="num flex h-5 w-5 shrink-0 items-center justify-center rounded-pill bg-accent-subtle text-caption font-semibold text-accent">{{ i + 1 }}</span>
+              <span class="text-sm leading-relaxed text-text-secondary">{{ c }}</span>
+            </li>
+          </ol>
+        </div>
+        <div v-if="guide.mistakes?.length">
+          <div class="mb-1.5 text-unit font-semibold text-warn">흔한 실수</div>
+          <ul class="flex flex-col gap-1.5">
+            <li v-for="(m, i) in guide.mistakes" :key="i" class="flex gap-2">
+              <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-warn" />
+              <span class="text-sm leading-relaxed text-text-secondary">{{ m }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </template>
 
     <!-- 세트 -->
     <div class="flex flex-col gap-2">

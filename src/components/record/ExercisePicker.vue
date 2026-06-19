@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import BottomSheet from '@/components/common/BottomSheet.vue'
-import { BODY_PARTS, bodyPartLabels, exercisesByBodyPart } from '@/data/exercises'
+import { BODY_PARTS, bodyPartLabels, exercisesByBodyPart, getExercise } from '@/data/exercises'
+import { getLastByExercise } from '@/firebase/database'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false }
@@ -13,6 +14,24 @@ const customMode = ref(false)
 const customName = ref('')
 
 const list = computed(() => exercisesByBodyPart(part.value))
+
+// 자주/최근 쓴 종목 — 열릴 때 1회 조회, lastDate 최신순 상위 8개(카탈로그 종목만)
+const lastByEx = ref({})
+watch(
+  () => props.modelValue,
+  async (open) => {
+    if (open && !Object.keys(lastByEx.value).length) {
+      lastByEx.value = (await getLastByExercise()) || {}
+    }
+  }
+)
+const frequent = computed(() =>
+  Object.entries(lastByEx.value)
+    .filter(([k]) => getExercise(k))
+    .sort((a, b) => (b[1].lastDate || '').localeCompare(a[1].lastDate || ''))
+    .slice(0, 8)
+    .map(([k]) => getExercise(k))
+)
 
 const equipLabel = {
   barbell: '바벨',
@@ -51,6 +70,21 @@ function addCustom() {
         직접 입력
       </button>
     </template>
+
+    <!-- 자주/최근 쓴 종목 -->
+    <div v-if="!customMode && frequent.length" class="mb-3">
+      <div class="mb-1.5 text-caption text-text-muted">최근 한 종목</div>
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          v-for="ex in frequent"
+          :key="ex.id"
+          class="rounded-pill bg-surface-1 px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors active:bg-accent-subtle active:text-accent"
+          @click="pick(ex)"
+        >
+          {{ ex.name }}
+        </button>
+      </div>
+    </div>
 
     <!-- 부위 탭 -->
     <div class="-mx-gutter mb-3 flex gap-2 overflow-x-auto px-gutter pb-1">

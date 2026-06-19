@@ -12,7 +12,9 @@ const props = defineProps({
   index: { type: Number, required: true }, // 0-base
   state: { type: String, default: 'pending' }, // 'done' | 'current' | 'pending'
   step: { type: Number, default: 2.5 },
-  plateSet: { type: Object, default: null } // { barKg, plates } — 있으면 플레이트 조합 표시
+  plateSet: { type: Object, default: null }, // { barKg, plates } — 있으면 플레이트 조합 표시
+  prevRecord: { type: Object, default: null }, // { lastWeight, lastReps } 지난 세션 직전 기록
+  lastSetVals: { type: Object, default: null } // { weight, reps } 이번 세션 직전 완료 세트
 })
 const emit = defineEmits(['check', 'uncheck', 'update'])
 
@@ -21,6 +23,27 @@ function setWeight(v) {
 }
 function setReps(v) {
   emit('update', { ...props.set, reps: v })
+}
+
+// 스마트 프리필 칩 — 직전 완료 세트/지난 기록을 1탭으로 채운다(현재 값과 다를 때만 노출).
+const chips = computed(() => {
+  const out = []
+  const cw = Number(props.set.weight)
+  const cr = Number(props.set.reps)
+  if (props.lastSetVals && props.lastSetVals.weight != null) {
+    const { weight, reps } = props.lastSetVals
+    if (weight !== cw || reps !== cr) out.push({ label: `전 세트 ${weight}×${reps}`, weight, reps })
+  }
+  if (props.prevRecord?.lastWeight != null) {
+    const weight = props.prevRecord.lastWeight
+    const reps = props.prevRecord.lastReps
+    const dup = out.some((o) => o.weight === weight && o.reps === reps)
+    if (!dup && (weight !== cw || reps !== cr)) out.push({ label: `지난 ${weight}×${reps}`, weight, reps })
+  }
+  return out
+})
+function applyChip(c) {
+  emit('update', { ...props.set, weight: c.weight, reps: c.reps })
 }
 
 const plate = computed(() => {
@@ -43,6 +66,17 @@ const plate = computed(() => {
 
   <!-- 진행 중 -->
   <div v-else-if="state === 'current'" class="rounded-field bg-surface-1 px-3 py-2.5 ring-2 ring-accent">
+    <div v-if="chips.length" class="mb-2 flex flex-wrap justify-center gap-1.5">
+      <button
+        v-for="c in chips"
+        :key="c.label"
+        type="button"
+        class="num rounded-pill bg-surface-2 px-2.5 py-1 text-caption font-medium text-text-secondary transition-colors active:bg-accent-subtle active:text-accent"
+        @click="applyChip(c)"
+      >
+        {{ c.label }}
+      </button>
+    </div>
     <div class="flex items-center gap-2">
       <span class="num w-6 shrink-0 text-center text-unit text-accent">{{ index + 1 }}</span>
       <div class="flex flex-1 items-center justify-center gap-2">

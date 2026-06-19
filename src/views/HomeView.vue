@@ -50,6 +50,7 @@ const pct = (v, t) => (t > 0 ? Math.min(100, Math.round((v / t) * 100)) : 0)
 
 const name = computed(() => authStore.profile?.displayName || authStore.user?.displayName || '')
 const streak = computed(() => currentStreak(recentLogs.value))
+const didToday = computed(() => isWorkoutDay(recentLogs.value[todayKey()]))
 const weekCount = computed(() => {
   let n = 0
   for (let i = 0; i < 7; i++) if (isWorkoutDay(recentLogs.value[daysAgoKey(i)])) n++
@@ -109,6 +110,17 @@ const lastSession = computed(() => {
           {{ todayPRs.map((p) => `${p.name} ${p.weight}kg×${p.reps}`).join(' · ') }}
         </div>
       </div>
+
+      <!-- 스트릭 안전 배너 — 오늘 미운동 + 2일+ 연속일 때만 -->
+      <button
+        v-if="streak >= 2 && !didToday"
+        class="mb-3 flex w-full items-center gap-2 rounded-card border border-accent/40 bg-accent-subtle p-3 text-left transition-opacity active:opacity-80"
+        @click="router.push('/log')"
+      >
+        <span class="text-xl">🔥</span>
+        <span class="text-sm font-medium text-text-primary">{{ streak }}일 연속 유지 중 — 오늘 한 세트면 {{ streak + 1 }}일!</span>
+        <span class="ml-auto text-accent">›</span>
+      </button>
 
       <!-- 오늘 추천 -->
       <button class="w-full rounded-card bg-accent p-5 text-left shadow-card transition-transform duration-tap active:scale-[0.99]" @click="router.push('/log')">
