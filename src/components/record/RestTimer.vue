@@ -43,7 +43,7 @@ onUnmounted(stop)
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-x-0 z-40 flex justify-end px-gutter" style="bottom: calc(theme(spacing.tabbar) + env(safe-area-inset-bottom) + 0.75rem)">
+  <div class="pointer-events-none fixed inset-x-0 z-40 flex justify-end px-gutter bottom-[calc(theme(spacing.tabbar)+env(safe-area-inset-bottom)+0.75rem)]">
     <!-- 실행 중 -->
     <div
       v-if="running"

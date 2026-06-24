@@ -265,7 +265,7 @@ async function start() {
     </div>
 
     <!-- sticky 하단 액션 -->
-    <div class="fixed inset-x-0 z-30 px-gutter" style="bottom: calc(theme(spacing.tabbar) + env(safe-area-inset-bottom) + 0.5rem)">
+    <div class="fixed inset-x-0 z-30 px-gutter bottom-[calc(theme(spacing.tabbar)+env(safe-area-inset-bottom)+0.5rem)]">
       <div class="flex gap-2">
         <button class="rounded-field bg-surface-2 px-5 py-4 font-medium text-text-secondary active:scale-95" @click="emit('cancel')">취소</button>
         <button

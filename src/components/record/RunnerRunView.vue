@@ -340,7 +340,7 @@ const progressDots = computed(() => list.value.map((_, i) => i <= idx.value))
     </div>
 
     <!-- 종목 네비 -->
-    <div class="fixed inset-x-0 z-30 px-gutter" style="bottom: calc(theme(spacing.tabbar) + env(safe-area-inset-bottom) + 0.5rem)">
+    <div class="fixed inset-x-0 z-30 px-gutter bottom-[calc(theme(spacing.tabbar)+env(safe-area-inset-bottom)+0.5rem)]">
       <div class="flex gap-2">
         <button
           class="flex-1 rounded-field bg-surface-2 py-3.5 font-medium text-text-secondary transition-transform active:scale-95 disabled:opacity-40"
