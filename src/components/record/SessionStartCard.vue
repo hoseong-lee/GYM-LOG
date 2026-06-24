@@ -6,6 +6,7 @@ import { bodyPartLabels } from '@/data/exercises'
 defineProps({
   todaySession: { type: Object, default: null }, // { name, bodyParts } | null
   isRestDay: { type: Boolean, default: false },
+  isSuggestion: { type: Boolean, default: false }, // 저장된 플랜이 아닌 분할 기본값 추천
   splitLabel: { type: String, default: '' },
   routines: { type: Array, default: () => [] }, // [{ id, name, items }]
   lastSession: { type: Object, default: null } // { date, parts:[], count } | null
@@ -18,15 +19,14 @@ const emit = defineEmits(['start-routine', 'start-blank', 'quick-log', 'edit-wee
     <!-- 오늘 추천 루틴 -->
     <div class="rounded-card bg-surface-1 p-5 shadow-card">
       <div class="flex items-center justify-between">
-        <div class="text-unit text-text-muted">오늘 루틴 {{ splitLabel ? `· ${splitLabel}` : '' }}</div>
+        <div class="text-unit text-text-muted">{{ isSuggestion ? '오늘 추천' : '오늘 루틴' }} {{ splitLabel ? `· ${splitLabel}` : '' }}</div>
         <button class="text-caption text-accent active:opacity-70" @click="emit('edit-weekly')">요일 플랜 편집</button>
       </div>
 
-      <template v-if="isRestDay">
-        <div class="mt-2 text-h1 font-bold text-text-primary">오늘은 쉬는 날 💤</div>
-        <p class="mt-1 text-sm text-text-muted">요일 플랜상 휴식일입니다. 그래도 운동하려면 아래에서 시작하세요.</p>
-      </template>
-      <template v-else-if="todaySession">
+      <!-- 휴식일이어도 막다른 길 없이 시작 가능하게 안내만 표기 -->
+      <p v-if="isRestDay" class="mt-2 text-sm text-text-muted">💤 오늘은 플랜상 휴식일 — 그래도 운동하려면 아래에서 바로 시작하세요.</p>
+
+      <template v-if="todaySession">
         <div class="mt-1 text-h1 font-bold text-text-primary">{{ todaySession.name }}</div>
         <div class="mt-2 flex flex-wrap gap-1.5">
           <span v-for="p in todaySession.bodyParts" :key="p" class="rounded-pill bg-accent-subtle px-2.5 py-1 text-caption font-medium text-accent">
@@ -37,7 +37,7 @@ const emit = defineEmits(['start-routine', 'start-blank', 'quick-log', 'edit-wee
           이 루틴으로 시작 →
         </button>
       </template>
-      <template v-else>
+      <template v-else-if="!isRestDay">
         <div class="mt-2 text-text-secondary">요일 루틴이 설정되지 않았습니다.</div>
         <button class="mt-3 text-caption text-accent active:opacity-70" @click="emit('edit-weekly')">요일 플랜 설정하기</button>
       </template>

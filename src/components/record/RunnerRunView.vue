@@ -236,6 +236,14 @@ async function finish() {
   }
 }
 
+// 실수 종료 방지 — 미완료 세트가 남았으면 확인 후 종료(완료 세트는 어차피 저장됨).
+const confirmFinishOpen = ref(false)
+const hasUndoneSets = computed(() => list.value.some((ex) => (ex.sets || []).some((s) => !s.done)))
+function requestFinish() {
+  if (hasUndoneSets.value) confirmFinishOpen.value = true
+  else finish()
+}
+
 // 진행 중 종목에 새 종목 추가 (러너 중에도)
 async function addCatalogExercise(catEx) {
   if (list.value.some((e) => e.exKey === catEx.id)) {
@@ -280,7 +288,7 @@ const progressDots = computed(() => list.value.map((_, i) => i <= idx.value))
       style="padding-top: env(safe-area-inset-top)"
     >
       <div class="flex h-14 w-full items-center gap-3">
-        <button class="-ml-1 flex h-tap items-center justify-center rounded-pill px-2 text-sm font-medium text-danger active:bg-surface-2" @click="finish">
+        <button class="-ml-1 flex h-tap items-center justify-center rounded-pill px-3 text-sm font-medium text-danger active:bg-surface-2" @click="requestFinish">
           ✕ 종료
         </button>
         <div class="flex flex-1 items-center justify-center gap-1">
@@ -339,8 +347,8 @@ const progressDots = computed(() => list.value.map((_, i) => i <= idx.value))
       </div>
     </div>
 
-    <!-- 종목 네비 -->
-    <div class="fixed inset-x-0 z-30 px-gutter bottom-[calc(theme(spacing.tabbar)+env(safe-area-inset-bottom)+0.5rem)]">
+    <!-- 종목 네비 (운동 중 탭바 숨김 → 하단 safe-area 위에 바로) -->
+    <div class="fixed inset-x-0 z-30 px-gutter bottom-[calc(env(safe-area-inset-bottom)+0.5rem)]">
       <div class="flex gap-2">
         <button
           class="flex-1 rounded-field bg-surface-2 py-3.5 font-medium text-text-secondary transition-transform active:scale-95 disabled:opacity-40"
@@ -426,5 +434,17 @@ const progressDots = computed(() => list.value.map((_, i) => i <= idx.value))
 
     <!-- 종목 추가 picker -->
     <ExercisePicker v-model="pickerOpen" @select="addCatalogExercise" @select-custom="addCustomExercise" />
+
+    <!-- 종료 확인 (미완료 세트 있을 때) -->
+    <BottomSheet v-model="confirmFinishOpen" title="운동을 종료할까요?">
+      <p class="leading-relaxed text-text-secondary">
+        아직 완료하지 않은 세트가 있어요. 지금 종료하면 더 진행할 수 없습니다.<br />
+        완료한 세트는 저장됩니다.
+      </p>
+      <div class="mt-4 flex gap-2 pb-2">
+        <button class="flex-1 rounded-field bg-surface-1 py-3.5 font-medium text-text-secondary active:scale-[0.99]" @click="confirmFinishOpen = false">계속 운동</button>
+        <button class="flex-1 rounded-field bg-danger py-3.5 font-semibold text-white active:scale-[0.99]" @click="confirmFinishOpen = false; finish()">종료</button>
+      </div>
+    </BottomSheet>
   </div>
 </template>

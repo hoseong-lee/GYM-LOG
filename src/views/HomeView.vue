@@ -5,10 +5,11 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import MiniLineChart from '@/components/common/MiniLineChart.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
-import { getLogsRange, getBodyRange, getDietDay, getWater, getLastByExercise } from '@/firebase/database'
-import { daysAgoKey, todayKey, formatDate } from '@/utils/date'
+import { getLogsRange, getBodyRange, getDietDay, getWater, getLastByExercise, getWeeklyPlan } from '@/firebase/database'
+import { daysAgoKey, todayKey, formatDate, dayjs } from '@/utils/date'
 import { currentStreak, isWorkoutDay, dayBodyParts, dayVolume } from '@/utils/stats'
 import { daysSincePart } from '@/utils/stats'
+import { rotationFromPlanDays, countWorkoutDays, rotationPick } from '@/utils/rotation'
 import { toSeries, ema } from '@/utils/body'
 import { sumMeals } from '@/utils/nutrition'
 import { splits, DEFAULT_SPLIT } from '@/data/splits'
@@ -22,6 +23,8 @@ const bodyRange = ref({})
 const todayDiet = ref(null)
 const todayWater = ref(0)
 const lastByEx = ref({})
+const weeklyPlan = ref(null)
+const rotationLogs = ref({}) // 로테이션 카운트용(anchor 이후)
 const loaded = ref(false)
 
 const PARTS = ['chest', 'back', 'shoulder', 'legs', 'arms']
@@ -32,6 +35,15 @@ onMounted(async () => {
   todayDiet.value = await getDietDay(todayKey())
   todayWater.value = await getWater(todayKey())
   lastByEx.value = await getLastByExercise()
+  weeklyPlan.value = await getWeeklyPlan()
+  const plan = weeklyPlan.value
+  if (plan?.updatedAt && plan.splitId === (authStore.split || DEFAULT_SPLIT)) {
+    const anchorKey = dayjs(plan.updatedAt).format('YYYY-MM-DD')
+    const start = anchorKey < daysAgoKey(14) ? anchorKey : daysAgoKey(14)
+    rotationLogs.value = await getLogsRange(start, todayKey())
+  } else {
+    rotationLogs.value = recentLogs.value
+  }
   loaded.value = true
 })
 
@@ -59,7 +71,19 @@ const weekCount = computed(() => {
 
 const currentSplit = computed(() => splits[authStore.split || DEFAULT_SPLIT] || splits[DEFAULT_SPLIT])
 const sinceByPart = computed(() => daysSincePart(recentLogs.value, PARTS))
+// 요일 플랜이 있으면 밀림 로테이션 추천(기록 탭과 동일), 없으면 부위 미수행 기반 추천.
+const rotationSession = computed(() => {
+  const plan = weeklyPlan.value
+  if (!plan || plan.splitId !== (authStore.split || DEFAULT_SPLIT) || !plan.days) return null
+  const rotation = rotationFromPlanDays(plan.days)
+  if (!rotation.length) return null
+  const anchorKey = plan.updatedAt ? dayjs(plan.updatedAt).format('YYYY-MM-DD') : null
+  const completed = countWorkoutDays(rotationLogs.value, isWorkoutDay, anchorKey, todayKey())
+  const name = rotationPick(rotation, completed)
+  return currentSplit.value.sessions.find((s) => s.name === name) || null
+})
 const todaySession = computed(() => {
+  if (rotationSession.value) return rotationSession.value
   let best = null
   let bestScore = -1
   for (const s of currentSplit.value.sessions) {

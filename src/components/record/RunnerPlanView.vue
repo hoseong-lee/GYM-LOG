@@ -222,7 +222,7 @@ async function start() {
       </div>
     </header>
 
-    <div class="px-gutter py-3">
+    <div class="px-gutter pt-3 pb-36">
       <div class="mb-3 flex items-center justify-between">
         <span class="text-unit text-text-muted">
           {{ seed?.sessionName ? `${seed.sessionName} 시드` : '직접 구성' }}
@@ -264,8 +264,8 @@ async function start() {
       </button>
     </div>
 
-    <!-- sticky 하단 액션 -->
-    <div class="fixed inset-x-0 z-30 px-gutter bottom-[calc(theme(spacing.tabbar)+env(safe-area-inset-bottom)+0.5rem)]">
+    <!-- sticky 하단 액션 (운동 중 탭바 숨김 → 하단 safe-area 위에 바로) -->
+    <div class="fixed inset-x-0 z-30 px-gutter bottom-[calc(env(safe-area-inset-bottom)+0.5rem)]">
       <div class="flex gap-2">
         <button class="rounded-field bg-surface-2 px-5 py-4 font-medium text-text-secondary active:scale-95" @click="emit('cancel')">취소</button>
         <button

@@ -2,7 +2,7 @@
 // 기록 탭 — Planfit식 세션 러너.
 // mode: idle(시작화면) / plan(구성) / run(러너) / summary(요약)
 // activeSession(RTDB) 존재 시 자동 재개. 빠른기록(한 종목)은 보조 유지.
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import SessionStartCard from '@/components/record/SessionStartCard.vue'
@@ -17,9 +17,11 @@ import { getActiveSession, clearActiveSession, getWeeklyPlan, listRoutines, getL
 import { splits, DEFAULT_SPLIT, SEED_SETS, SEED_REPS } from '@/data/splits'
 import { exercisesByBodyPart, bodyPartLabels } from '@/data/exercises'
 import { sessionStats, sessionFromDayLog } from '@/utils/session'
-import { dayBodyParts } from '@/utils/stats'
+import { dayBodyParts, isWorkoutDay } from '@/utils/stats'
 import { resolveExKey } from '@/utils/exercise'
 import { todayKey, daysAgoKey, dayjs } from '@/utils/date'
+import { rotationFromPlanDays, countWorkoutDays, rotationPick } from '@/utils/rotation'
+import { immersive } from '@/composables/useImmersive'
 import { useAuthStore } from '@/stores/auth'
 import { pushToast } from '@/composables/useToast'
 
@@ -33,7 +35,6 @@ const summaryStats = ref(null)
 const loading = ref(true)
 
 const weeklyOpen = ref(false)
-const todayMapping = ref(null) // weeklyPlan.days[today] | null
 const routines = ref([])
 const lastSession = ref(null) // { date, parts, count }
 let lastDayLog = null // 지난 세션 반복용 원본
@@ -47,13 +48,10 @@ const quickCurrent = ref(null)
 const splitId = computed(() => authStore.split || DEFAULT_SPLIT)
 const splitObj = computed(() => splits[splitId.value] || splits[DEFAULT_SPLIT])
 
-// 오늘 요일 매핑 → 세션
-const todaySession = computed(() => {
-  const m = todayMapping.value
-  if (!m || m.rest) return null
-  return splitObj.value.sessions.find((s) => s.name === m.sessionName) || null
-})
-const isRestDay = computed(() => !!todayMapping.value?.rest)
+// 오늘 추천 세션 — 요일 플랜을 "밀림 로테이션"으로 해석(빠진 날만큼 자동 이월).
+const todaySession = ref(null) // { name, bodyParts, exercises? } | null
+const isRestDay = ref(false) // 오늘 요일이 플랜상 휴식일 (밀림과 별개로 배너 표기용)
+const isSuggestion = ref(false) // 저장된 플랜이 아닌 분할 기본값 기반 추천일 때 true
 
 async function refresh() {
   loading.value = true
@@ -74,15 +72,24 @@ async function refresh() {
 
     const plan = await getWeeklyPlan()
     const dow = dayjs().day()
-    if (plan && plan.splitId === splitId.value && plan.days?.[dow]) {
-      todayMapping.value = plan.days[dow]
-    } else {
-      todayMapping.value = splitObj.value.defaultWeekly?.[dow] || null
-    }
+    const usingSaved = !!(plan && plan.splitId === splitId.value && plan.days)
+    const planDays = usingSaved ? plan.days : splitObj.value.defaultWeekly || null
+    isSuggestion.value = !usingSaved
+    isRestDay.value = !!planDays?.[dow]?.rest
 
-    // 내 루틴 + 지난 세션(최근 30일 중 가장 최근 근력 기록일)
+    // 밀림 로테이션 — anchor(플랜 저장일) 이후 "운동한 날 수" mod 로테이션 길이.
+    // 빠진 날엔 카운트가 안 늘어 다음 날로 자동 이월된다.
+    const rotation = rotationFromPlanDays(planDays)
+    const anchorKey = usingSaved && plan.updatedAt ? dayjs(plan.updatedAt).format('YYYY-MM-DD') : null
+    const rangeStart = anchorKey && anchorKey < daysAgoKey(30) ? anchorKey : daysAgoKey(30)
+
+    // 내 루틴 + 지난 세션(최근 근력 기록일)
     routines.value = await listRoutines()
-    const recent = await getLogsRange(daysAgoKey(30), todayKey())
+    const recent = await getLogsRange(rangeStart, todayKey())
+
+    const completed = countWorkoutDays(recent, isWorkoutDay, anchorKey, todayKey())
+    const recName = rotationPick(rotation, completed)
+    todaySession.value = recName ? splitObj.value.sessions.find((s) => s.name === recName) || null : null
     lastSession.value = null
     lastDayLog = null
     const days = Object.keys(recent).sort().reverse()
@@ -103,6 +110,10 @@ async function refresh() {
   }
 }
 onMounted(refresh)
+
+// 운동 흐름(구성/러너/요약) 동안 글로벌 탭바 숨김 → 공간 확보 + 실수 이탈 방지.
+watch(mode, (m) => { immersive.value = m !== 'idle' }, { immediate: true })
+onUnmounted(() => { immersive.value = false })
 
 // 저장된 루틴으로 시작
 function startSavedRoutine(routine) {
@@ -195,6 +206,7 @@ async function onSessionMutated() {
       v-if="mode === 'idle' && !loading"
       :today-session="todaySession"
       :is-rest-day="isRestDay"
+      :is-suggestion="isSuggestion"
       :split-label="splitObj.label"
       :routines="routines"
       :last-session="lastSession"
